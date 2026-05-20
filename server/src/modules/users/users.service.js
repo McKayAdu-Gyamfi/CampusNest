@@ -1,6 +1,6 @@
-import { supabase } from "../../config/db.js";
+import { convex } from "../../config/db.js";
+import { auth } from "../../../auth.js";
 
-// Utility to create consistent errors
 class UserServiceError extends Error {
   constructor(message, statusCode) {
     super(message);
@@ -10,176 +10,80 @@ class UserServiceError extends Error {
 }
 
 export const getMe = async (userId) => {
-  const { data, error } = await supabase
-    .from("user")
-    .select("*, ROOM:current_room_id (room_number, HOSTEL (hostel_name))")
-    .eq("id", userId)
-    .single();
-
-  if (error) throw new UserServiceError(error.message, 400);
-  return data;
+  try {
+    const data = await convex.query("users:getById", { id: userId });
+    if (!data) throw new UserServiceError("User not found", 404);
+    return data;
+  } catch (err) {
+    throw new UserServiceError(err.message, 400);
+  }
 };
 
 export const updateMe = async (userId, updates, userType) => {
-  if (userType === "HOSTEL_MANAGER") {
-    // Managers can't change their type or see student fields
-    const { user_type, student_id, course, profile_complete, ...safeUpdates } = updates;
-
-    // safeUpdates.updated_at = new Date(); // If using updated_at auto-updates
-
-    const { data, error } = await supabase
-      .from("user")
-      .update(safeUpdates)
-      .eq("id", userId)
-      .select()
-      .single();
-
-    if (error) throw new UserServiceError(error.message, 400);
-    return data;
+  try {
+    return await convex.mutation("users:updateMe", { id: userId, updates, userType });
+  } catch (err) {
+    throw new UserServiceError(err.message, 400);
   }
-
-  if (userType === "STUDENT") {
-    const current = await supabase
-      .from("user")
-      .select("student_id, course")
-      .eq("id", userId)
-      .single();
-
-    if (current.error) throw new UserServiceError(current.error.message, 400);
-
-    const merged = { ...current.data, ...updates };
-    const profileComplete = !!(merged.student_id && merged.course);
-
-    const { data, error } = await supabase
-      .from("user")
-      .update({ ...updates, profile_complete: profileComplete })
-      .eq("id", userId)
-      .select()
-      .single();
-
-    if (error) throw new UserServiceError(error.message, 400);
-    return data;
-  }
-
-  // Admin updating themselves (fallback)
-  const { user_type, ...safeUpdates } = updates;
-  const { data, error } = await supabase
-    .from("user")
-    .update(safeUpdates)
-    .eq("id", userId)
-    .select()
-    .single();
-
-  if (error) throw new UserServiceError(error.message, 400);
-  return data;
 };
 
 export const completeProfile = async (userId, data) => {
-  // Essentially an update for students that specifically aims to complete profile
-  const { student_id, course } = data;
-  const profileComplete = !!(student_id && course);
-
-  console.log(`[DEBUG completeProfile] Attempting to update userId: "${userId}"`);
-
-  // Debug SELECT to see if Supabase client can see the row
-  const { data: checkData, error: checkError } = await supabase.from('user').select('id').eq('id', userId);
-  console.log(`[DEBUG completeProfile] Pre-update SELECT check:`, checkData, `Error:`, checkError);
-
-  const { data: updatedUser, error } = await supabase
-    .from("user")
-    .update({ student_id, course, profile_complete: profileComplete })
-    .eq("id", userId)
-    .select();
-
-  console.log(`[DEBUG completeProfile] Update Result:`, updatedUser, `Error:`, error);
-
-  if (error) throw new UserServiceError(error.message, 400);
-  if (!updatedUser || updatedUser.length === 0) {
-    throw new UserServiceError("User profile not found in database", 404);
+  try {
+    const result = await convex.mutation("users:completeProfile", { id: userId, ...data });
+    if (!result) throw new UserServiceError("User profile not found in database", 404);
+    return result;
+  } catch (err) {
+    throw new UserServiceError(err.message, 400);
   }
-
-  return updatedUser[0];
 };
 
 export const completeManagerProfile = async (userId, data) => {
-  const { payment_details } = data;
-  const profileComplete = !!payment_details;
-
-  console.log(`[DEBUG completeManagerProfile] Attempting to update userId: "${userId}"`);
-
-  const { data: updatedUser, error } = await supabase
-    .from("user")
-    .update({ payment_details, profile_complete: profileComplete })
-    .eq("id", userId)
-    .select();
-
-  console.log(`[DEBUG completeManagerProfile] Update Result:`, updatedUser, `Error:`, error);
-
-  if (error) throw new UserServiceError(error.message, 400);
-  if (!updatedUser || updatedUser.length === 0) {
-    throw new UserServiceError("User profile not found in database", 404);
+  try {
+    const result = await convex.mutation("users:completeManagerProfile", { id: userId, ...data });
+    if (!result) throw new UserServiceError("User profile not found in database", 404);
+    return result;
+  } catch (err) {
+    throw new UserServiceError(err.message, 400);
   }
-
-  return updatedUser[0];
 };
 
 export const getMyHostels = async (userId) => {
-  // Assuming a manager can have many hostels assigned to them where manager_id = id
-  const { data, error } = await supabase
-    .from("HOSTEL")
-    .select("*")
-    .eq("manager_id", userId);
-
-  if (error) throw new UserServiceError(error.message, 400);
-  return data;
+  try {
+    return await convex.query("users:getMyHostels", { manager_id: userId });
+  } catch (err) {
+    throw new UserServiceError(err.message, 400);
+  }
 };
 
 export const listUsers = async () => {
-  const { data, error } = await supabase
-    .from("user")
-    .select("*");
-
-  if (error) throw new UserServiceError(error.message, 400);
-  return data;
+  try {
+    return await convex.query("users:list");
+  } catch (err) {
+    throw new UserServiceError(err.message, 400);
+  }
 };
 
 export const getUserById = async (id) => {
-  const { data, error } = await supabase
-    .from("user")
-    .select("*")
-    .eq("id", id)
-    .single();
-
-  if (error) throw new UserServiceError(error.message, 400);
-  return data;
+  try {
+    return await convex.query("users:getById", { id });
+  } catch (err) {
+    throw new UserServiceError(err.message, 400);
+  }
 };
 
 export const adminUpdateUser = async (id, updates) => {
-  // Admin can update almost anything
-  const { data, error } = await supabase
-    .from("user")
-    .update(updates)
-    .eq("id", id)
-    .select()
-    .single();
-
-  if (error) throw new UserServiceError(error.message, 400);
-  return data;
+  try {
+    return await convex.mutation("users:adminUpdateUser", { id, updates });
+  } catch (err) {
+    throw new UserServiceError(err.message, 400);
+  }
 };
-
-// Flow 3: ADMIN creates another ADMIN 
-import { auth } from "../../../auth.js"; // Needs auth to create user
 
 export const createAdmin = async (adminDetails) => {
   const { email, password, name } = adminDetails;
 
-  // Create user via BetterAuth
   const response = await auth.api.signUpEmail({
-    body: {
-      email,
-      password,
-      name: name || email.split("@")[0]
-    }
+    body: { email, password, name: name || email.split("@")[0] }
   });
 
   if (response.error) {
@@ -188,14 +92,13 @@ export const createAdmin = async (adminDetails) => {
 
   const { user } = response;
 
-  // Immediately set user_type to ADMIN
-  const { data, error } = await supabase
-    .from("user")
-    .update({ user_type: "ADMIN", profile_complete: true })
-    .eq("id", user.id)
-    .select()
-    .single();
-
-  if (error) throw new UserServiceError(error.message, 400);
-  return data;
+  try {
+    return await convex.mutation("users:updateAuthUserType", {
+      id: user.id,
+      user_type: "ADMIN",
+      profile_complete: true
+    });
+  } catch (err) {
+    throw new UserServiceError(err.message, 400);
+  }
 };

@@ -1,8 +1,5 @@
-import { createClient } from "@supabase/supabase-js";
+import { ConvexHttpClient } from "convex/browser";
 import "dotenv/config";
 
-// Create a single supabase client for interacting with your database
-export const supabase = createClient(
-  process.env.SUPABASE_URL,
-  process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_PUBLISHABLE_KEY,
-);
+// Create a single Convex client for interacting with your database
+export const convex = new ConvexHttpClient(process.env.CONVEX_URL);

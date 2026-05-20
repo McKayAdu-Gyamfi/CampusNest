@@ -1,28 +1,23 @@
-import { supabase } from "../../config/db.js";
-import { syncRoomAvailability } from "../rooms/rooms.controller.js";
+import { convex } from "../../config/db.js";
 
 // GET /api/bookings?student_id=123
 export const getBookings = async (req, res, next) => {
   try {
     const { student_id } = req.query;
 
-    let query = supabase.from("BOOKING").select(`
-      *,
-      ROOM (room_number, hostel_id, HOSTEL (hostel_name)),
-      USERS:student_id (email, profile_complete)
-    `);
-
+    let targetStudentId = undefined;
     if (req.user.user_type === "STUDENT") {
       // Students can only see their own bookings
-      query = query.eq("student_id", req.user.id);
+      targetStudentId = req.user.id;
     } else if (student_id) {
       // Managers/Admins can filter by student_id
-      query = query.eq("student_id", student_id);
+      targetStudentId = student_id;
     }
 
-    const { data, error } = await query;
+    const data = await convex.query("bookings:list", { 
+      student_id: targetStudentId 
+    });
 
-    if (error) throw error;
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -34,17 +29,12 @@ export const getBookingById = async (req, res, next) => {
   try {
     const { id } = req.params;
 
-    const { data, error } = await supabase
-      .from("BOOKING")
-      .select(`
-        *,
-        ROOM (room_number, hostel_id, HOSTEL (hostel_name)),
-        USERS:student_id (email, profile_complete)
-      `)
-      .eq("id", id)
-      .single();
+    const data = await convex.query("bookings:getById", { id });
+    
+    if (!data) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
 
-    if (error) throw error;
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -56,44 +46,28 @@ export const createBooking = async (req, res, next) => {
   try {
     const { check_in_date, check_out_date, room_id, student_id } = req.body;
 
-    // Check room availability
-    const { data: room, error: roomError } = await supabase
-      .from("ROOM")
-      .select("is_available")
-      .eq("id", room_id)
-      .single();
-
-    if (roomError || !room) {
-      return res.status(404).json({ success: false, message: "Room not found" });
-    }
-
-    if (!room.is_available) {
-      return res.status(400).json({ success: false, message: "Room is fully occupied and not available for booking" });
-    }
-
     // Force student_id to be the authenticated user's ID if role is STUDENT
     // Otherwise allow Manager/Admin to specify student_id
     const final_student_id = req.user.user_type === "STUDENT" ? req.user.id : student_id;
+    
+    // Convert dates to timestamp if they aren't already
+    const check_in_timestamp = new Date(check_in_date).getTime();
+    const check_out_timestamp = new Date(check_out_date).getTime();
 
-    const payload = {
-      check_in_date,
-      check_out_date,
+    // Convex backend now handles the room availability check
+    const data = await convex.mutation("bookings:create", {
+      check_in_date: check_in_timestamp,
+      check_out_date: check_out_timestamp,
       room_id,
-      student_id: final_student_id,
-      status: "PENDING",
-      created_at: new Date(),
-      updated_at: new Date()
-    };
+      student_id: final_student_id
+    });
 
-    const { data, error } = await supabase
-      .from("BOOKING")
-      .insert([payload])
-      .select()
-      .single();
-
-    if (error) throw error;
     res.status(201).json({ success: true, data });
   } catch (err) {
+    // If the room is not available, our Convex function throws an error
+    if (err.message?.includes("Room is fully occupied")) {
+      return res.status(400).json({ success: false, message: "Room is fully occupied and not available for booking" });
+    }
     next(err);
   }
 };
@@ -104,24 +78,10 @@ export const updateBookingStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Fetch booking details including room and hostel to verify ownership
-    const { data: booking, error: fetchError } = await supabase
-      .from("BOOKING")
-      .select(`
-        *,
-        ROOM (
-          id,
-          current_occupancy,
-          hostel_id,
-          HOSTEL (
-            manager_id
-          )
-        )
-      `)
-      .eq("id", id)
-      .single();
+    // Fetch booking details to verify ownership
+    const booking = await convex.query("bookings:getById", { id });
 
-    if (fetchError || !booking) {
+    if (!booking) {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
@@ -140,40 +100,8 @@ export const updateBookingStatus = async (req, res, next) => {
       }
     }
 
-    const { data: updatedBooking, error: updateError } = await supabase
-      .from("BOOKING")
-      .update({ status, updated_at: new Date() })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (updateError) throw updateError;
-
-    // Handle Occupancy Changes
-    const previousStatus = booking.status;
-    const newStatus = status;
-    const roomId = booking.room_id;
-    let occupancyChange = 0;
-
-    // From non-confirmed to CONFIRMED
-    if (newStatus === "CONFIRMED" && previousStatus !== "CONFIRMED") {
-      occupancyChange = 1;
-    }
-    // From CONFIRMED to CANCELLED/CHECKED_OUT
-    else if (previousStatus === "CONFIRMED" && (newStatus === "CANCELLED" || newStatus === "CHECKED_OUT")) {
-      occupancyChange = -1;
-    }
-
-    if (occupancyChange !== 0 && booking.ROOM) {
-      const newOccupancy = Math.max(0, (booking.ROOM.current_occupancy || 0) + occupancyChange);
-
-      await supabase
-        .from("ROOM")
-        .update({ current_occupancy: newOccupancy })
-        .eq("id", roomId);
-
-      await syncRoomAvailability(roomId);
-    }
+    // Convex backend handles the status update and occupancy changes inline
+    const updatedBooking = await convex.mutation("bookings:updateStatus", { id, status });
 
     res.json({ success: true, data: updatedBooking });
   } catch (err) {

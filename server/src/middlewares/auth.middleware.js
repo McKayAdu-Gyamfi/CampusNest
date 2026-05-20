@@ -1,5 +1,5 @@
 import { auth } from "../../auth.js";
-import { supabase } from "../config/db.js";
+import { convex } from "../config/db.js";
 
 export const requireAuth = async (req, res, next) => {
   try {
@@ -43,14 +43,10 @@ export const requireCompleteProfile = async (req, res, next) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
-    const { data: user, error } = await supabase
-      .from("user")
-      .select("profile_complete")
-      .eq("id", req.user.id)
-      .single();
+    const user = await convex.query("users:getById", { id: req.user.id });
 
-    if (error || !user) {
-      console.error("[Auth Middleware - requireCompleteProfile] Error fetching user:", error);
+    if (!user) {
+      console.error("[Auth Middleware - requireCompleteProfile] Error fetching user");
       return res.status(401).json({ success: false, message: "User not found" });
     }
 

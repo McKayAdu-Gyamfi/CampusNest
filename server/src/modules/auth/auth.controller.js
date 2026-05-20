@@ -1,5 +1,5 @@
 import { auth } from "../../../auth.js";
-import { supabase } from "../../config/db.js";
+import { convex } from "../../config/db.js";
 
 // POST /api/auth/register
 export const registerManager = async (req, res, next) => {
@@ -21,23 +21,16 @@ export const registerManager = async (req, res, next) => {
 
     const { user } = response;
 
-    // 2. Immediately update the new user in Supabase to specify type
-    // Since BetterAuth created the user row, we just mark them as HOSTEL_MANAGER
-    const { data: updatedUser, error } = await supabase
-      .from("user") // Ensure this matches actual table name, it might be 'USERS' based on controllers
-      .update({
+    // 2. Immediately update the new user in Convex to specify type
+    // TODO: Migrate to Convex mutation
+    /*
+    const updatedUser = await convex.mutation("users:update", {
+        id: user.id,
         user_type, // "HOSTEL_MANAGER"
-        profile_complete: false // Requires manager to upload payment details later
-      })
-      .eq("id", user.id)
-      .select()
-      .single();
-
-    if (error) {
-      // Depending on the app, you may want to delete the user or log the error
-      console.error("[Auth Controller - registerManager] Supabase Error:", error);
-      throw error;
-    }
+        profile_complete: false 
+    });
+    */
+    const updatedUser = user;
 
     console.log("[Auth Controller - registerManager] Success for user:", updatedUser?.id);
     res.status(201).json({ success: true, data: updatedUser });

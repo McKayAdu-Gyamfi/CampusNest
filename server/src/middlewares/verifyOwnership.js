@@ -1,17 +1,13 @@
-import { supabase } from "../config/db.js";
+import { convex } from "../config/db.js";
 
 export const verifyHostelOwnership = async (req, res, next) => {
   try {
     const hostelId = req.params.hostelId || req.params.id;
     const userId = req.user.id;
 
-    const { data: hostel, error } = await supabase
-      .from("HOSTEL")
-      .select("manager_id")
-      .eq("id", hostelId)
-      .single();
+    const hostel = await convex.query("hostels:getById", { id: hostelId });
 
-    if (error || !hostel) {
+    if (!hostel) {
       return res.status(404).json({ success: false, message: "Hostel not found" });
     }
 
@@ -30,29 +26,19 @@ export const verifyRoomOwnership = async (req, res, next) => {
     const roomId = req.params.id;
     const userId = req.user.id;
 
-    // Fetch the room to find its associated hostel
-    const { data: room, error: roomError } = await supabase
-      .from("ROOM")
-      .select("hostel_id")
-      .eq("id", roomId)
-      .single();
+    const room = await convex.query("rooms:getById", { id: roomId });
 
-    if (roomError || !room) {
+    if (!room) {
       return res.status(404).json({ success: false, message: "Room not found" });
     }
 
-    // Fetch the hostel to check the manager_id
-    const { data: hostel, error: hostelError } = await supabase
-      .from("HOSTEL")
-      .select("manager_id")
-      .eq("id", room.hostel_id)
-      .single();
+    const hostelId = room.hostel_id;
+    const hostel = await convex.query("hostels:getById", { id: hostelId });
 
-    if (hostelError || !hostel) {
+    if (!hostel) {
       return res.status(404).json({ success: false, message: "Associated hostel not found" });
     }
 
-    // Check ownership or admin status
     if (hostel.manager_id !== userId && req.user.user_type !== "ADMIN") {
       return res.status(403).json({ success: false, message: "Forbidden: You do not own the hostel for this room" });
     }

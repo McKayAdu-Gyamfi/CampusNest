@@ -1,4 +1,4 @@
-import { supabase } from "../../config/db.js";
+import { convex } from "../../config/db.js";
 
 class AmenityServiceError extends Error {
   constructor(message, statusCode) {
@@ -11,107 +11,51 @@ class AmenityServiceError extends Error {
 // HOSTEL AMENITIES
 
 export const updateHostelAmenities = async (hostelId, amenities) => {
-  // 1. Delete all existing amenities for this hostel
-  const { error: deleteError } = await supabase
-    .from("HOSTEL_AMENITY")
-    .delete()
-    .eq("hostel_id", hostelId);
-    
-  if (deleteError) throw new AmenityServiceError(deleteError.message, 400);
-
-  // 2. Insert the new ones
-  if (amenities && amenities.length > 0) {
-    const amenitiesToInsert = amenities.map(name => ({
-      hostel_id: hostelId,
-      name
-    }));
-    
-    const { data, error: insertError } = await supabase
-      .from("HOSTEL_AMENITY")
-      .insert(amenitiesToInsert)
-      .select();
-      
-    if (insertError) throw new AmenityServiceError(insertError.message, 400);
-    return data;
+  try {
+    return await convex.mutation("hostels:updateAmenities", { id: hostelId, amenities });
+  } catch (error) {
+    throw new AmenityServiceError(error.message, 400);
   }
-  return [];
 };
 
 export const addHostelAmenities = async (hostelId, amenities) => {
-  const amenitiesToInsert = amenities.map(name => ({
-    hostel_id: hostelId,
-    name
-  }));
-  
-  const { data, error } = await supabase
-    .from("HOSTEL_AMENITY")
-    .insert(amenitiesToInsert)
-    .select();
-    
-  if (error) throw new AmenityServiceError(error.message, 400);
-  return data;
+  try {
+    return await convex.mutation("hostels:addAmenities", { id: hostelId, amenities });
+  } catch (error) {
+    throw new AmenityServiceError(error.message, 400);
+  }
 };
 
-export const removeHostelAmenity = async (id) => {
-  const { error } = await supabase
-    .from("HOSTEL_AMENITY")
-    .delete()
-    .eq("id", id);
-    
-  if (error) throw new AmenityServiceError(error.message, 400);
-  return { success: true };
+export const removeHostelAmenity = async (hostelId, amenityName) => {
+  try {
+    return await convex.mutation("hostels:removeAmenity", { id: hostelId, amenity: amenityName });
+  } catch (error) {
+    throw new AmenityServiceError(error.message, 400);
+  }
 };
 
 // ROOM AMENITIES
 
 export const updateRoomAmenities = async (roomId, amenities) => {
-  // 1. Delete all existing amenities for this room
-  const { error: deleteError } = await supabase
-    .from("ROOM_AMENITY")
-    .delete()
-    .eq("room_id", roomId);
-    
-  if (deleteError) throw new AmenityServiceError(deleteError.message, 400);
-
-  // 2. Insert the new ones
-  if (amenities && amenities.length > 0) {
-    const amenitiesToInsert = amenities.map(name => ({
-      room_id: roomId,
-      name
-    }));
-    
-    const { data, error: insertError } = await supabase
-      .from("ROOM_AMENITY")
-      .insert(amenitiesToInsert)
-      .select();
-      
-    if (insertError) throw new AmenityServiceError(insertError.message, 400);
-    return data;
+  try {
+    return await convex.mutation("rooms:updateAmenities", { id: roomId, amenities });
+  } catch (error) {
+    throw new AmenityServiceError(error.message, 400);
   }
-  return [];
 };
 
 export const addRoomAmenities = async (roomId, amenities) => {
-  const amenitiesToInsert = amenities.map(name => ({
-    room_id: roomId,
-    name
-  }));
-  
-  const { data, error } = await supabase
-    .from("ROOM_AMENITY")
-    .insert(amenitiesToInsert)
-    .select();
-    
-  if (error) throw new AmenityServiceError(error.message, 400);
-  return data;
+  try {
+    return await convex.mutation("rooms:addAmenities", { id: roomId, amenities });
+  } catch (error) {
+    throw new AmenityServiceError(error.message, 400);
+  }
 };
 
-export const removeRoomAmenity = async (id) => {
-  const { error } = await supabase
-    .from("ROOM_AMENITY")
-    .delete()
-    .eq("id", id);
-    
-  if (error) throw new AmenityServiceError(error.message, 400);
-  return { success: true };
+export const removeRoomAmenity = async (roomId, amenityName) => {
+  try {
+    return await convex.mutation("rooms:removeAmenity", { id: roomId, amenity: amenityName });
+  } catch (error) {
+    throw new AmenityServiceError(error.message, 400);
+  }
 };
