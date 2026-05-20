@@ -10,6 +10,7 @@ export default function LivePreview() {
   const hasActiveBooking = bookings.some((b) => b.studentName === "Nana Osei" && (b.status === "Pending" || b.status === "Approved"));
 
   const handleClose = () => {
+    
     if (location.state?.returnPath) {
       navigate(location.state.returnPath, { state: { restoreHostel: location.state.returnToHostel }, replace: true });
     } else {
