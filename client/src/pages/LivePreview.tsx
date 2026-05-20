@@ -1,13 +1,51 @@
+import { useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Maximize, X, Hand, Scaling } from "lucide-react";
 import { useBookings } from "@/contexts/BookingContext";
 
 export default function LivePreview() {
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const navigate = useNavigate();
   const location = useLocation();
   const summary = location.state;
   const { bookings } = useBookings();
   const hasActiveBooking = bookings.some((b) => b.studentName === "Nana Osei" && (b.status === "Pending" || b.status === "Approved"));
+
+  const tourConfig = {
+    default: {
+      firstScene: "main_room",
+      sceneFadeDuration: 1000,
+      autoLoad: true
+    },
+    scenes: {
+      main_room: {
+        type: "equirectangular",
+        panorama: "https://clear-tortoise-364.eu-west-1.convex.cloud/api/storage/a407eab1-d662-4104-8abc-b927d0218897",
+        hotSpots: [
+          {
+            pitch: -5,
+            yaw: 140,
+            type: "scene",
+            text: "Go to Bathroom",
+            sceneId: "bathroom"
+          }
+        ]
+      },
+      bathroom: {
+        type: "equirectangular",
+        panorama: "https://clear-tortoise-364.eu-west-1.convex.cloud/api/storage/9074e9bd-4806-4f3e-853b-02e518ceadfa",
+        hotSpots: [
+          {
+            pitch: -5,
+            yaw: -120,
+            type: "scene",
+            text: "Back to Main Room",
+            sceneId: "main_room"
+          }
+        ]
+      }
+    }
+  };
 
   const handleClose = () => {
     if (location.state?.returnPath) {
@@ -32,11 +70,15 @@ export default function LivePreview() {
       {/* Background Room Tour (Pannellum) */}
       <div className="absolute inset-0 z-0 bg-black">
         <iframe 
+          ref={iframeRef}
           width="100%" 
           height="100%" 
           allowFullScreen 
           style={{ borderStyle: "none" }} 
-          src="https://cdn.pannellum.org/2.5/pannellum.htm#panorama=https%3A//emkajlxnqtpvbkotujuu.supabase.co/storage/v1/object/public/Images_Campus_Nest/DSC_0105.jpg&autoLoad=true"
+          src="/tour.html"
+          onLoad={() => {
+            iframeRef.current?.contentWindow?.postMessage({ type: 'pannellum_config', config: tourConfig }, '*');
+          }}
         />
       </div>
 
@@ -91,9 +133,9 @@ export default function LivePreview() {
       {/* Bottom Interface Group */}
       <div className="absolute bottom-6 left-2 right-2 z-30 flex flex-col items-center">
         
-        {/* Interaction Hints & Map Preview */}
-        <div className="w-full flex justify-between items-end mb-4 px-2">
-          <div className="flex bg-black/60 backdrop-blur-md rounded-2xl px-4 py-2 space-x-6 border border-white/20 shadow-lg">
+        {/* Interaction Hints */}
+        <div className="w-full flex justify-between items-end mb-4 px-2 pointer-events-none">
+          <div className="flex bg-black/60 backdrop-blur-md rounded-2xl px-4 py-2 space-x-6 border border-white/20 shadow-lg pointer-events-auto">
             <div className="flex items-center space-x-2">
               <Hand className="w-4 h-4 text-white/90" />
               <span className="text-[10px] font-bold text-white uppercase tracking-widest">Drag to<br/>look</span>
@@ -104,8 +146,6 @@ export default function LivePreview() {
               <span className="text-[10px] font-bold text-white uppercase tracking-widest">Pinch<br/>to zoom</span>
             </div>
           </div>
-
-
         </div>
 
         {/* Action Panel & Bottom Nav Wrapper */}

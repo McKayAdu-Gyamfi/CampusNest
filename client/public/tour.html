@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdn.pannellum.org/2.5/pannellum.css"/>
+    <script type="text/javascript" src="https://cdn.pannellum.org/2.5/pannellum.js"></script>
+    <style>
+        body, html { width: 100%; height: 100%; margin: 0; padding: 0; background: #000; overflow: hidden; }
+        #panorama { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+<div id="panorama"></div>
+<script>
+    let viewer = null;
+    window.addEventListener('message', function(event) {
+        if (event.data && event.data.type === 'pannellum_config') {
+            if (viewer) {
+                viewer.destroy();
+            }
+            viewer = pannellum.viewer('panorama', event.data.config);
+        }
+    });
+</script>
+</body>
+</html>
