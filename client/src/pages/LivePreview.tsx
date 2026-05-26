@@ -23,8 +23,8 @@ export default function LivePreview() {
         panorama: "https://ardent-lobster-343.eu-west-1.convex.cloud/api/storage/daa32b7c-8365-452d-a7d5-b8e04570f5d3",
         hotSpots: [
           {
-            pitch: -5,
-            yaw: 150,
+            pitch: -4,
+            yaw: 220,
             type: "scene",
             text: "Go to Bathroom",
             sceneId: "bathroom"
@@ -41,6 +41,13 @@ export default function LivePreview() {
             type: "scene",
             text: "Back to Main Room",
             sceneId: "main_room"
+          },
+          {
+            pitch: -5,
+            yaw: 90,
+            type: "scene",
+            text: "Go to bathroom_2",
+            sceneId: "bathroom_2"
           }
         ]
       }
@@ -54,7 +61,16 @@ export default function LivePreview() {
             yaw: -120,
             type: "scene",
             text: "Back to Main Room",
-            sceneId: "main_room"
+            sceneId: "main_room",
+          },
+          {
+            pitch: -5,
+            yaw: -90,
+            type: "scene",
+            text: "Back to bathroom_1",
+            sceneId: "bathroom_1"
+          }
+        ]
   };
 
   const handleClose = () => {
