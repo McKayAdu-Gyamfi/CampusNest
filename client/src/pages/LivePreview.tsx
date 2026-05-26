@@ -15,7 +15,8 @@ export default function LivePreview() {
     default: {
       firstScene: "main_room",
       sceneFadeDuration: 1000,
-      autoLoad: true
+      autoLoad: true,
+      doubleClickZoom: false
     },
     scenes: {
       main_room: {
@@ -103,7 +104,6 @@ export default function LivePreview() {
           height="100%" 
           allowFullScreen 
           style={{ borderStyle: "none" }} 
-    
           src="/tour.html"
           onLoad={() => {
             iframeRef.current?.contentWindow?.postMessage({ type: 'pannellum_config', config: tourConfig }, '*');
