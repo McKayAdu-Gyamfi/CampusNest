@@ -24,7 +24,7 @@ export default function LivePreview() {
         hotSpots: [
           {
             pitch: -5,
-            yaw: 185,
+            yaw: 170,
             type: "scene",
             text: "Go to Bathroom",
             sceneId: "bathroom_1"
