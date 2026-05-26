@@ -23,11 +23,11 @@ export default function LivePreview() {
         panorama: "https://ardent-lobster-343.eu-west-1.convex.cloud/api/storage/daa32b7c-8365-452d-a7d5-b8e04570f5d3",
         hotSpots: [
           {
-            pitch: -4,
+            pitch: -5,
             yaw: 200,
             type: "scene",
             text: "Go to Bathroom",
-            sceneId: "bathroom"
+            sceneId: "bathroom_1"
           }
         ]
       },
