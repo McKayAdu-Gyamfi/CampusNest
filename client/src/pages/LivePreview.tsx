@@ -24,16 +24,30 @@ export default function LivePreview() {
         hotSpots: [
           {
             pitch: -5,
-            yaw: 140,
+            yaw: 150,
             type: "scene",
             text: "Go to Bathroom",
             sceneId: "bathroom"
           }
         ]
       },
-      bathroom: {
+      bathroom_1: {
         type: "equirectangular",
         panorama: "https://clear-tortoise-364.eu-west-1.convex.cloud/api/storage/9074e9bd-4806-4f3e-853b-02e518ceadfa",
+        hotSpots: [
+          {
+            pitch: -5,
+            yaw: -90,
+            type: "scene",
+            text: "Back to Main Room",
+            sceneId: "main_room"
+          }
+        ]
+      }
+    },
+    bathroom_2: {
+        type: "equirectangular",
+        panorama: "https://ardent-lobster-343.eu-west-1.convex.cloud/api/storage/0d061f94-4b5b-497d-86cf-76b4d22aebb1",
         hotSpots: [
           {
             pitch: -5,
@@ -41,10 +55,6 @@ export default function LivePreview() {
             type: "scene",
             text: "Back to Main Room",
             sceneId: "main_room"
-          }
-        ]
-      }
-    }
   };
 
   const handleClose = () => {
