@@ -71,6 +71,7 @@ export default function LivePreview() {
             sceneId: "bathroom_1"
           }
         ]
+    }
   };
 
   const handleClose = () => {
