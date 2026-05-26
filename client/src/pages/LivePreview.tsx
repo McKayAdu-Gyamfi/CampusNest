@@ -50,9 +50,8 @@ export default function LivePreview() {
             sceneId: "bathroom_2"
           }
         ]
-      }
-    },
-    bathroom_2: {
+      },
+      bathroom_2: {
         type: "equirectangular",
         panorama: "https://ardent-lobster-343.eu-west-1.convex.cloud/api/storage/0d061f94-4b5b-497d-86cf-76b4d22aebb1",
         hotSpots: [
@@ -71,8 +70,10 @@ export default function LivePreview() {
             sceneId: "bathroom_1"
           }
         ]
+      }
     }
   };
+  
 
   const handleClose = () => {
     if (location.state?.returnPath) {
