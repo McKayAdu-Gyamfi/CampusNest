@@ -20,7 +20,7 @@ export default function LivePreview() {
     scenes: {
       main_room: {
         type: "equirectangular",
-        panorama: "https://clear-tortoise-364.eu-west-1.convex.cloud/api/storage/a407eab1-d662-4104-8abc-b927d0218897",
+        panorama: "https://ardent-lobster-343.eu-west-1.convex.cloud/api/storage/daa32b7c-8365-452d-a7d5-b8e04570f5d3",
         hotSpots: [
           {
             pitch: -5,
