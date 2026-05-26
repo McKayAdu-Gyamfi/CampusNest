@@ -103,8 +103,7 @@ export default function LivePreview() {
           height="100%" 
           allowFullScreen 
           style={{ borderStyle: "none" }} 
-          onContextMenu={(e) => e.preventDefault()}
-          onDragStart={(e) => e.preventDefault()}
+    
           src="/tour.html"
           onLoad={() => {
             iframeRef.current?.contentWindow?.postMessage({ type: 'pannellum_config', config: tourConfig }, '*');
