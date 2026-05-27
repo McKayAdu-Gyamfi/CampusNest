@@ -14,6 +14,11 @@
 <body>
 <div id="panorama"></div>
 <script>
+    document.addEventListener('contextmenu', function(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }, true);
+
     let viewer = null;
     window.addEventListener('message', function(event) {
         if (event.data && event.data.type === 'pannellum_config') {

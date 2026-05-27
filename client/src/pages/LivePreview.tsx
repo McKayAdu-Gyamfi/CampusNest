@@ -15,37 +15,66 @@ export default function LivePreview() {
     default: {
       firstScene: "main_room",
       sceneFadeDuration: 1000,
-      autoLoad: true
+      autoLoad: true,
+      doubleClickZoom: false
     },
     scenes: {
       main_room: {
         type: "equirectangular",
-        panorama: "https://clear-tortoise-364.eu-west-1.convex.cloud/api/storage/a407eab1-d662-4104-8abc-b927d0218897",
+        panorama: "https://ardent-lobster-343.eu-west-1.convex.cloud/api/storage/daa32b7c-8365-452d-a7d5-b8e04570f5d3",
         hotSpots: [
           {
             pitch: -5,
-            yaw: 140,
+            yaw: 170,
             type: "scene",
             text: "Go to Bathroom",
-            sceneId: "bathroom"
+            sceneId: "bathroom_1"
           }
         ]
       },
-      bathroom: {
+      bathroom_1: {
         type: "equirectangular",
         panorama: "https://clear-tortoise-364.eu-west-1.convex.cloud/api/storage/9074e9bd-4806-4f3e-853b-02e518ceadfa",
+        hotSpots: [
+          {
+            pitch: -5,
+            yaw: -90,
+            type: "scene",
+            text: "Back to Main Room",
+            sceneId: "main_room"
+          },
+          {
+            pitch: -5,
+            yaw: 90,
+            type: "scene",
+            text: "Go to bathroom_2",
+            sceneId: "bathroom_2"
+          }
+        ]
+      },
+      bathroom_2: {
+        type: "equirectangular",
+        panorama: "https://ardent-lobster-343.eu-west-1.convex.cloud/api/storage/0d061f94-4b5b-497d-86cf-76b4d22aebb1",
         hotSpots: [
           {
             pitch: -5,
             yaw: -120,
             type: "scene",
             text: "Back to Main Room",
-            sceneId: "main_room"
+            sceneId: "main_room",
+          },
+          {
+            pitch: -5,
+            yaw: -90,
+            type: "scene",
+            text: "Back to bathroom_1",
+            sceneId: "bathroom_1"
           }
         ]
       }
     }
   };
+  
 
   const handleClose = () => {
     if (location.state?.returnPath) {
