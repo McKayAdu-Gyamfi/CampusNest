@@ -8,7 +8,7 @@
     <style>
         body, html { width: 100%; height: 100%; margin: 0; padding: 0; background: #000; overflow: hidden; }
         #panorama { width: 100%; height: 100%; }
-        .pnlm-about-msg, .pnlm-logo { display: none !important; }
+        .pnlm-about-msg, .pnlm-logo, .pnlm-zoom-controls, .pnlm-fullscreen-toggle-button { display: none !important; }
     </style>
 </head>
 <body>
@@ -21,11 +21,21 @@
 
     let viewer = null;
     window.addEventListener('message', function(event) {
-        if (event.data && event.data.type === 'pannellum_config') {
+        if (!event.data) return;
+        
+        if (event.data.type === 'pannellum_config') {
             if (viewer) {
                 viewer.destroy();
             }
             viewer = pannellum.viewer('panorama', event.data.config);
+        } else if (event.data.type === 'zoom_in') {
+            if (viewer) {
+                viewer.setHfov(viewer.getHfov() - 15);
+            }
+        } else if (event.data.type === 'zoom_out') {
+            if (viewer) {
+                viewer.setHfov(viewer.getHfov() + 15);
+            }
         }
     });
 </script>
