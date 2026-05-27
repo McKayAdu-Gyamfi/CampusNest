@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { Maximize, X, Hand, Scaling } from "lucide-react";
+import { Maximize, X, Hand, Scaling, Ruler } from "lucide-react";
 import { useBookings } from "@/contexts/BookingContext";
 
 export default function LivePreview() {
@@ -92,6 +92,45 @@ export default function LivePreview() {
         <div className="bg-black/40 backdrop-blur-xl border border-white/20 rounded-3xl p-4 shadow-xl pointer-events-auto">
           <h2 className="text-lg font-bold text-primary mb-1">Premium Studio</h2>
           <p className="text-sm text-white/90 leading-snug">Experience the layout and natural lighting of your future home.</p>
+        </div>
+      </div>
+
+      {/* Dimensions Overlay */}
+      <div className="absolute top-[220px] left-4 z-10 pointer-events-none animate-in fade-in slide-in-from-left-4 duration-700 delay-500">
+        <div className="bg-black/30 backdrop-blur-md border border-white/10 rounded-3xl p-4 flex flex-col space-y-4 shadow-2xl relative overflow-hidden">
+          {/* Decorative background glow */}
+          <div className="absolute -top-10 -right-10 w-20 h-20 bg-primary/20 rounded-full blur-2xl"></div>
+          
+          <div className="flex items-center space-x-2 text-white mb-2">
+            <Ruler className="w-4 h-4 text-primary" />
+            <span className="text-[10px] font-extrabold uppercase tracking-widest text-white/80">Room Dimensions</span>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4">
+            <div className="flex flex-col space-y-1 bg-black/40 p-3 rounded-2xl border border-white/5">
+              <span className="text-[9px] uppercase tracking-wider text-white/40">Area</span>
+              <div className="flex items-baseline space-x-1">
+                <span className="text-lg font-bold text-white">250</span>
+                <span className="text-[10px] text-white/60">sq ft</span>
+              </div>
+            </div>
+            <div className="flex flex-col space-y-1 bg-black/40 p-3 rounded-2xl border border-white/5">
+              <span className="text-[9px] uppercase tracking-wider text-white/40">Ceiling</span>
+              <div className="flex items-baseline space-x-1">
+                <span className="text-lg font-bold text-white">10</span>
+                <span className="text-[10px] text-white/60">ft</span>
+              </div>
+            </div>
+          </div>
+          
+          <div className="flex flex-col space-y-1 bg-black/40 p-3 rounded-2xl border border-white/5">
+            <span className="text-[9px] uppercase tracking-wider text-white/40">Layout (L × W)</span>
+            <div className="flex items-center space-x-2 text-white">
+              <span className="text-base font-bold">18'</span>
+              <X className="w-3 h-3 text-primary/70" />
+              <span className="text-base font-bold">14'</span>
+            </div>
+          </div>
         </div>
       </div>
 

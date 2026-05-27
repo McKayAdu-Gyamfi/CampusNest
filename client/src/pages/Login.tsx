@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ArrowRight, Shield, HelpCircle, CheckCircle2 } from "lucide-react";
+import { ArrowRight, Shield, HelpCircle, CheckCircle2, FileText, Lock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import Logo from "@/components/Logo";
 import { Input } from "@/components/ui/input";
@@ -14,9 +14,25 @@ const AVATARS = [
 ];
 
 export default function Login() {
-  const [step, setStep] = useState<"login" | "avatar">("login");
+  const [step, setStep] = useState<"institution" | "login" | "avatar">("institution");
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
+  const [institutionQuery, setInstitutionQuery] = useState("");
+  const [showDropdown, setShowDropdown] = useState(false);
+  const [selectedInstitution, setSelectedInstitution] = useState("");
   const navigate = useNavigate();
+
+  const INSTITUTIONS = [
+    "Ashesi University",
+    "Wisconsin International University College",
+    "Central University",
+    "University of Ghana",
+    "Lancaster University Ghana",
+    "University of Professional Studies Accra",
+    "Ghana Communication Technology",
+    "IPMC Ghana"
+  ];
+
+  const filteredInstitutions = INSTITUTIONS.filter(inst => inst.toLowerCase().includes(institutionQuery.toLowerCase()));
 
   const handleLoginClick = (e: React.FormEvent | React.MouseEvent) => {
     e.preventDefault();
@@ -34,6 +50,114 @@ export default function Login() {
     localStorage.setItem("userAvatar", "manager-admin");
     navigate("/manager");
   };
+
+  if (step === "institution") {
+    return (
+      <div className="flex flex-col min-h-screen bg-background relative font-sans">
+        {/* Subtle Background Pattern */}
+        <div className="absolute inset-0 z-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-primary/10 via-background to-background pointer-events-none" />
+
+        {/* Top Header */}
+        <div className="absolute top-8 left-8 z-10">
+          <Logo />
+        </div>
+
+        {/* Center Card */}
+        <div className="flex-1 flex items-center justify-center z-10 p-6">
+          <div className="bg-card rounded-[24px] shadow-xl shadow-black/5 w-full max-w-[480px] p-8 sm:p-10 border border-border/60">
+            <div className="text-center mb-8">
+              <h1 className="text-2xl font-extrabold tracking-tight text-foreground mb-2">
+                Welcome to CampusNest
+              </h1>
+              <p className="text-sm text-muted-foreground font-medium">
+                Select your institution to find exclusive spaces
+              </p>
+            </div>
+
+            <div className="space-y-6">
+              <div className="relative">
+                <label className="block text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2 ml-1">Your Institution</label>
+                <div className="relative">
+                  <Input 
+                    type="text" 
+                    placeholder="Search for your university..." 
+                    value={institutionQuery}
+                    onChange={(e) => {
+                      setInstitutionQuery(e.target.value);
+                      setShowDropdown(true);
+                      setSelectedInstitution("");
+                    }}
+                    onFocus={() => setShowDropdown(true)}
+                    className="h-14 border-border/80 bg-background rounded-xl text-[15px] font-medium focus-visible:ring-2 focus-visible:ring-primary/20 focus-visible:border-primary placeholder:text-muted-foreground/50 transition-all shadow-sm"
+                  />
+                  
+                  {showDropdown && institutionQuery.length > 0 && (
+                    <div className="absolute top-[calc(100%+8px)] left-0 right-0 bg-card border border-border rounded-xl shadow-lg z-50 max-h-60 overflow-y-auto overflow-x-hidden animate-in fade-in slide-in-from-top-2 duration-200">
+                      {filteredInstitutions.length > 0 ? (
+                        filteredInstitutions.map((inst, idx) => {
+                          const matchIndex = inst.toLowerCase().indexOf(institutionQuery.toLowerCase());
+                          return (
+                            <div 
+                              key={idx}
+                              className="px-4 py-3.5 hover:bg-accent cursor-pointer text-foreground text-[14px] font-medium border-b border-border/50 last:border-0 transition-colors"
+                              onClick={() => {
+                                setInstitutionQuery(inst);
+                                setSelectedInstitution(inst);
+                                setShowDropdown(false);
+                                setTimeout(() => setStep("login"), 400);
+                              }}
+                            >
+                              {matchIndex >= 0 ? (
+                                <span>
+                                  {inst.substring(0, matchIndex)}
+                                  <span className="text-primary font-bold">{inst.substring(matchIndex, matchIndex + institutionQuery.length)}</span>
+                                  {inst.substring(matchIndex + institutionQuery.length)}
+                                </span>
+                              ) : inst}
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="px-4 py-4 text-muted-foreground text-sm font-medium text-center">No institutions found</div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {!selectedInstitution && (
+                <div className="bg-primary/5 border border-primary/10 text-primary p-4 rounded-xl text-[13px] font-medium leading-relaxed flex items-start space-x-3">
+                  <div className="mt-0.5">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                  </div>
+                  <p>Type the first few letters of your institution to see matching results in the list.</p>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-3 mt-8">
+                <button className="flex items-center justify-between px-4 py-3.5 border border-border/80 bg-background rounded-xl hover:bg-accent transition-all group shadow-sm">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <FileText className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-[13px] font-bold text-foreground leading-tight">Terms of<br/>Use</span>
+                  </div>
+                </button>
+                <button className="flex items-center justify-between px-4 py-3.5 border border-border/80 bg-background rounded-xl hover:bg-accent transition-all group shadow-sm">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center group-hover:scale-105 transition-transform">
+                      <Lock className="w-4 h-4 text-primary" />
+                    </div>
+                    <span className="text-[13px] font-bold text-foreground leading-tight">Privacy<br/>Policy</span>
+                  </div>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   if (step === "avatar") {
     return (
