@@ -22,7 +22,8 @@ This document lists all active API endpoints identified in the project, organize
 - `POST /:id/amenities` : Add single room amenity **(Requires Auth, Room Owner)**
 - `DELETE /:id/amenities/:amenityId` : Delete room amenity **(Requires Auth, Room Owner)**
 - `POST /:id/images` : Upload room images to Supabase (up to 10) **(Requires Auth, Room Owner)**
-- `POST /:id/tours` : Store a room tour scene (dynamically links panoramas for Frontend merging) **(Requires Auth, Room Owner)**
+- `POST /:id/tours/generate` : Upload a raw panorama photo; orchestrates the temp-pano-api microservice server-to-server (shared internal key, never exposed to the client) and persists the resulting scene **(Requires Auth, Room Owner)**
+- `POST /:id/tours` : Register a scene from an already-generated config URL, without re-running the panorama pipeline **(Requires Auth, Room Owner)**
 - `DELETE /:id/tours/:sceneId` : Delete a room tour scene **(Requires Auth, Room Owner)**
 
 ## 📅 Bookings (`/api/bookings`)
@@ -60,3 +61,6 @@ Custom routes (handled before the BetterAuth wildcard, see `src/modules/auth/aut
 - `POST /api/auth/sign-out` : Sign out **(Public)**
 
 All other `/api/auth/*` paths (session lookup, etc.) are handled by the **BetterAuth** node handler directly. Microsoft SSO has been officially removed; all users authenticate via local email/password.
+
+## 🖼️ Panorama pipeline (`temp-pano-api`)
+`POST /api/rooms/:id/tours/generate` is the only entry point into this pipeline from the app. This server calls the separate `temp-pano-api` microservice (a FastAPI service, deployed independently) server-to-server, authenticated with a shared `X-Internal-Key` header. Requires `PANO_API_URL` and `PANO_API_KEY` (matching that service's `INTERNAL_API_KEY`) set in this server's environment. The client never talks to `temp-pano-api` directly.
