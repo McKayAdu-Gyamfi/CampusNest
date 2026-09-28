@@ -9,9 +9,18 @@ import crypto from 'crypto';
  * @param {string} folderPath - Optional folder path within the bucket (e.g., 'hostels/123')
  * @returns {Promise<string>} - The public URL of the uploaded image
  */
+// Derived from the validated mimetype (upload.middleware.js only allows these
+// two), never from the client-supplied originalname — that field is fully
+// attacker-controlled and using it to build a path/extension allowed a
+// crafted filename (e.g. containing "../") to escape the intended folder.
+const MIME_EXTENSIONS = {
+  'image/jpeg': 'jpg',
+  'image/png': 'png',
+};
+
 export const uploadImageToSupabase = async (file, bucketName, folderPath = '') => {
   // Generate a unique file name
-  const fileExtension = file.originalname.split('.').pop();
+  const fileExtension = MIME_EXTENSIONS[file.mimetype] || 'bin';
   const randomName = crypto.randomBytes(16).toString('hex');
   const fileName = `${randomName}.${fileExtension}`;
   
