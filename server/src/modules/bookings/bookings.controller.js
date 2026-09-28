@@ -123,6 +123,7 @@ export const updateBookingStatus = async (req, res, next) => {
         *,
         ROOM (
           id,
+          capacity,
           current_occupancy,
           hostel_id,
           HOSTEL (
@@ -152,15 +153,6 @@ export const updateBookingStatus = async (req, res, next) => {
       }
     }
 
-    const { data: updatedBooking, error: updateError } = await supabase
-      .from("BOOKING")
-      .update({ status, updated_at: new Date() })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (updateError) throw updateError;
-
     // Handle Occupancy Changes
     const previousStatus = booking.status;
     const newStatus = status;
@@ -175,6 +167,25 @@ export const updateBookingStatus = async (req, res, next) => {
     else if (previousStatus === "CONFIRMED" && (newStatus === "CANCELLED" || newStatus === "CHECKED_OUT")) {
       occupancyChange = -1;
     }
+
+    // Reject confirming into a room that's already at capacity — without this,
+    // a manager confirming multiple PENDING bookings for the same room can
+    // push current_occupancy above capacity with nothing to stop it.
+    if (occupancyChange === 1 && booking.ROOM) {
+      const nextOccupancy = (booking.ROOM.current_occupancy || 0) + 1;
+      if (nextOccupancy > booking.ROOM.capacity) {
+        return res.status(409).json({ success: false, message: "Room is already at full capacity" });
+      }
+    }
+
+    const { data: updatedBooking, error: updateError } = await supabase
+      .from("BOOKING")
+      .update({ status, updated_at: new Date() })
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (updateError) throw updateError;
 
     if (occupancyChange !== 0 && booking.ROOM) {
       const newOccupancy = Math.max(0, (booking.ROOM.current_occupancy || 0) + occupancyChange);
