@@ -9,7 +9,7 @@ export default function LivePreview() {
   const location = useLocation();
   const summary = location.state;
   const { bookings } = useBookings();
-  const hasActiveBooking = bookings.some((b) => b.studentName === "Nana Osei" && (b.status === "Pending" || b.status === "Approved"));
+  const hasActiveBooking = bookings.some((b) => b.studentName === "Sarah Adjei" && (b.status === "PENDING" || b.status === "CONFIRMED"));
 
   const [isFullscreen, setIsFullscreen] = useState(false);
 
@@ -238,7 +238,7 @@ export default function LivePreview() {
           <div className="space-y-2 sm:space-y-3">
             {summary.amenities.slice(0, 5).map((amenity: string, idx: number) => (
               <div key={idx} className="flex items-center space-x-2.5">
-                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(59,130,246,0.6)]" />
+                <div className="w-1 h-1 sm:w-1.5 sm:h-1.5 rounded-full bg-primary shadow-[0_0_8px_rgba(197,106,48,0.6)]" />
                 <span className="text-[10px] sm:text-[11px] font-bold text-white/90 truncate">{amenity}</span>
               </div>
             ))}
