@@ -65,6 +65,24 @@ export const getRoomById = async (req, res, next) => {
 // POST /api/rooms
 export const createRoom = async (req, res, next) => {
   try {
+    const { hostel_id } = req.body;
+
+    // Verify the caller owns the hostel they're attaching this room to
+    // (requireRole only confirms they're SOME manager, not this hostel's manager).
+    const { data: hostel, error: hostelError } = await supabase
+      .from("HOSTEL")
+      .select("manager_id")
+      .eq("id", hostel_id)
+      .single();
+
+    if (hostelError || !hostel) {
+      return res.status(404).json({ success: false, message: "Hostel not found" });
+    }
+
+    if (hostel.manager_id !== req.user.id && req.user.user_type !== "ADMIN") {
+      return res.status(403).json({ success: false, message: "Forbidden: You do not own this hostel" });
+    }
+
     const payload = {
       ...req.body,
       current_occupancy: 0,
