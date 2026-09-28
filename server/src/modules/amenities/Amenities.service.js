@@ -8,6 +8,16 @@ class AmenityServiceError extends Error {
   }
 }
 
+// HOSTEL_AMENITY/ROOM_AMENITY both have a UNIQUE(*_id, name) constraint —
+// Postgres code 23505 means the caller tried to add an amenity that's
+// already there. Surface that as a clean 409 instead of the raw DB error.
+const wrapInsertError = (error) => {
+  if (error.code === "23505") {
+    return new AmenityServiceError("One or more of these amenities is already added", 409);
+  }
+  return new AmenityServiceError(error.message, 400);
+};
+
 // HOSTEL AMENITIES
 
 export const updateHostelAmenities = async (hostelId, amenities) => {
@@ -31,7 +41,7 @@ export const updateHostelAmenities = async (hostelId, amenities) => {
       .insert(amenitiesToInsert)
       .select();
       
-    if (insertError) throw new AmenityServiceError(insertError.message, 400);
+    if (insertError) throw wrapInsertError(insertError);
     return data;
   }
   return [];
@@ -48,7 +58,7 @@ export const addHostelAmenities = async (hostelId, amenities) => {
     .insert(amenitiesToInsert)
     .select();
     
-  if (error) throw new AmenityServiceError(error.message, 400);
+  if (error) throw wrapInsertError(error);
   return data;
 };
 
@@ -85,7 +95,7 @@ export const updateRoomAmenities = async (roomId, amenities) => {
       .insert(amenitiesToInsert)
       .select();
       
-    if (insertError) throw new AmenityServiceError(insertError.message, 400);
+    if (insertError) throw wrapInsertError(insertError);
     return data;
   }
   return [];
@@ -102,7 +112,7 @@ export const addRoomAmenities = async (roomId, amenities) => {
     .insert(amenitiesToInsert)
     .select();
     
-  if (error) throw new AmenityServiceError(error.message, 400);
+  if (error) throw wrapInsertError(error);
   return data;
 };
 
