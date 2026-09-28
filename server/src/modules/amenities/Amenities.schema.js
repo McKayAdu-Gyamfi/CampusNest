@@ -1,5 +1,7 @@
 import { z } from "zod";
 
+// Must exactly match the Postgres `amenity_name` enum (src/utils/supabase_schema.sql) —
+// anything else passes zod here but fails with a raw DB error at insert time.
 export const ValidAmenities = [
   "WIFI",
   "AIR_CONDITIONING",
@@ -9,9 +11,9 @@ export const ValidAmenities = [
   "GYM",
   "LAUNDRY",
   "STUDY_ROOM",
-  "TV",
-  "FRIDGE",
-  "MICROWAVE",
+  "RESERVED_1",
+  "RESERVED_2",
+  "RESERVED_3",
 ];
 
 export const updateAmenitiesSchema = z.object({
