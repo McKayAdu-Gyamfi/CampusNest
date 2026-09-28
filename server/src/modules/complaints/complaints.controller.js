@@ -77,6 +77,34 @@ export const createComplaint = async (req, res, next) => {
       return res.status(404).json({ success: false, message: "Hostel not found" });
     }
 
+    if (req.user.user_type === "STUDENT") {
+      // A student can only complain about a hostel they've actually booked.
+      const { data: rooms, error: roomsError } = await supabase
+        .from("ROOM")
+        .select("id")
+        .eq("hostel_id", hostel_id);
+
+      if (roomsError) throw roomsError;
+      const roomIds = (rooms || []).map((r) => r.id);
+
+      let hasBooked = false;
+      if (roomIds.length > 0) {
+        const { data: booking, error: bookingError } = await supabase
+          .from("BOOKING")
+          .select("id")
+          .eq("student_id", req.user.id)
+          .in("room_id", roomIds)
+          .limit(1);
+
+        if (bookingError) throw bookingError;
+        hasBooked = !!(booking && booking.length > 0);
+      }
+
+      if (!hasBooked) {
+        return res.status(403).json({ success: false, message: "You can only file a complaint about a hostel you've booked" });
+      }
+    }
+
     const payload = {
       ...req.body,
       // A student can only ever file a complaint as themselves, never on
