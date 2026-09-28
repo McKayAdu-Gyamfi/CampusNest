@@ -14,6 +14,7 @@ router.get("/:id", controllers.getRoomById);
 
 router.post("/", requireAuth, requireRole("HOSTEL_MANAGER"), validateRequest(createRoomSchema), controllers.createRoom);
 router.patch("/:id", requireAuth, verifyRoomOwnership, validateRequest(updateRoomSchema), controllers.updateRoom);
+router.delete("/:id", requireAuth, verifyRoomOwnership, controllers.deleteRoom);
 
 // Amenities routes
 router.put("/:id/amenities", requireAuth, verifyRoomOwnership, validateRequest(updateAmenitiesSchema), controllers.updateRoomAmenities);

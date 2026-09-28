@@ -2,6 +2,30 @@ import { supabase } from "../../config/db.js";
 import * as amenitiesService from "../amenities/Amenities.service.js";
 import { uploadImageToSupabase } from "../../utils/supabaseStorage.js";
 
+// Keep HOSTEL.total_rooms/available_rooms in sync with the ROOM rows that
+// actually exist for it. Read-then-write (not atomic under heavy concurrency,
+// but consistent with how the rest of this codebase talks to Supabase).
+const adjustHostelRoomCounts = async (hostelId, { totalDelta = 0, availableDelta = 0 }) => {
+  if (!totalDelta && !availableDelta) return;
+
+  const { data: hostel, error } = await supabase
+    .from("HOSTEL")
+    .select("total_rooms, available_rooms")
+    .eq("id", hostelId)
+    .single();
+
+  if (error || !hostel) return;
+
+  await supabase
+    .from("HOSTEL")
+    .update({
+      total_rooms: Math.max(0, hostel.total_rooms + totalDelta),
+      available_rooms: Math.max(0, hostel.available_rooms + availableDelta),
+      updated_at: new Date(),
+    })
+    .eq("id", hostelId);
+};
+
 // GET /api/rooms?hostel_id=123
 export const getRooms = async (req, res, next) => {
   try {
@@ -98,7 +122,39 @@ export const createRoom = async (req, res, next) => {
       .single();
 
     if (error) throw error;
+
+    await adjustHostelRoomCounts(hostel_id, { totalDelta: 1, availableDelta: 1 });
+
     res.status(201).json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// DELETE /api/rooms/:id
+export const deleteRoom = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+
+    const { data: room, error: fetchError } = await supabase
+      .from("ROOM")
+      .select("hostel_id, is_available")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !room) {
+      return res.status(404).json({ success: false, message: "Room not found" });
+    }
+
+    const { error } = await supabase.from("ROOM").delete().eq("id", id);
+    if (error) throw error;
+
+    await adjustHostelRoomCounts(room.hostel_id, {
+      totalDelta: -1,
+      availableDelta: room.is_available ? -1 : 0,
+    });
+
+    res.json({ success: true, message: "Room deleted successfully" });
   } catch (err) {
     next(err);
   }
@@ -108,7 +164,7 @@ export const syncRoomAvailability = async (roomId) => {
   try {
     const { data: room, error: fetchError } = await supabase
       .from("ROOM")
-      .select("capacity, current_occupancy")
+      .select("hostel_id, capacity, current_occupancy, is_available")
       .eq("id", roomId)
       .single();
 
@@ -120,6 +176,10 @@ export const syncRoomAvailability = async (roomId) => {
       .from("ROOM")
       .update({ is_available })
       .eq("id", roomId);
+
+    if (is_available !== room.is_available) {
+      await adjustHostelRoomCounts(room.hostel_id, { availableDelta: is_available ? 1 : -1 });
+    }
   } catch (err) {
     console.error("Error syncing room availability:", err);
   }
