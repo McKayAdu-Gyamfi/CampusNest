@@ -12,7 +12,13 @@ export const getHostels = async (req, res, next) => {
       .select("*, manager:manager_id (id, email)");
 
     if (search) {
-      query = query.or(`hostel_name.ilike.%${search}%,location.ilike.%${search}%`);
+      // Strip characters that are structurally significant in a PostgREST
+      // filter string (",", "(", ")") so a search term can't break out of
+      // this .or() clause or inject extra conditions.
+      const safeSearch = String(search).replace(/[,()]/g, "");
+      if (safeSearch) {
+        query = query.or(`hostel_name.ilike.%${safeSearch}%,location.ilike.%${safeSearch}%`);
+      }
     }
 
     if (max_distance && !isNaN(Number(max_distance))) {
