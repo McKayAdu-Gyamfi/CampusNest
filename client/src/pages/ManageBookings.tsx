@@ -1,39 +1,40 @@
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { Link } from "react-router-dom";
+import { useBookings } from "@/contexts/BookingContext";
 
 export default function ManageBookings() {
   const [activeTab, setActiveTab] = useState("Upcoming");
-  
-  // Toggle this to see the empty state from Image 2
-  const isEmpty = false;
+  const { bookings: rawBookings } = useBookings();
 
-  const bookings = [
-    {
-      id: 1,
-      status: "CONFIRMED",
-      ref: "KC-4B29X",
-      hostelName: "Dufie Annex",
-      roomDetails: "Premium Studio · Rm 402B · ensuite",
-      moveIn: "Jan 12, 2026",
-      semester: "Spring 2026",
-      amountPaid: "GHS 8,400",
-      amountDue: null,
-      expiresIn: null
-    },
-    {
-      id: 2,
-      status: "PAYMENT DUE",
-      ref: "KC-7J14M",
-      hostelName: "Legon Heights",
-      roomDetails: "Shared Twin · Rm 118 · shared bath",
-      moveIn: "Jan 15, 2026",
-      semester: "Spring 2026",
-      amountPaid: null,
-      amountDue: "GHS 5,200",
-      expiresIn: "Hold expires in 46h"
-    }
+  // Map the shared booking-approval status onto this page's payment-oriented display:
+  // a booking is only "confirmed" once a manager has approved it; otherwise it's awaiting payment/hold.
+  const mappedBookings = rawBookings.map((b) => ({
+    id: b.id,
+    rawStatus: b.status,
+    status: b.status === "CONFIRMED" || b.status === "CHECKED_OUT" ? ("CONFIRMED" as const) : b.status === "CANCELLED" ? ("CANCELLED" as const) : ("PAYMENT DUE" as const),
+    ref: b.reference,
+    hostelName: b.hostelName,
+    roomDetails: `${b.roomLabel} · ${b.roomNumber}`,
+    moveIn: b.moveIn,
+    semester: b.semester,
+    amountPaid: b.status === "CONFIRMED" || b.status === "CHECKED_OUT" ? `GHS ${b.price.toLocaleString()}` : null,
+    amountDue: b.status === "CONFIRMED" || b.status === "CHECKED_OUT" ? null : `GHS ${b.price.toLocaleString()}`,
+    expiresIn: b.status === "PENDING" ? "Awaiting manager approval" : null,
+  }));
+
+  const upcomingBookings = mappedBookings.filter((b) => b.rawStatus === "PENDING" || b.rawStatus === "CONFIRMED");
+  const cancelledBookings = mappedBookings.filter((b) => b.rawStatus === "CANCELLED");
+  const pastBookings = mappedBookings.filter((b) => b.rawStatus === "CHECKED_OUT");
+
+  const tabs = [
+    { name: "Upcoming", count: upcomingBookings.length },
+    { name: "Past", count: pastBookings.length },
+    { name: "Cancelled", count: cancelledBookings.length },
   ];
+
+  const bookings = activeTab === "Upcoming" ? upcomingBookings : activeTab === "Cancelled" ? cancelledBookings : pastBookings;
+  const hasAnyBookings = rawBookings.length > 0;
 
   return (
     <div className="flex flex-col min-h-screen bg-[#F0EFEA] dark:bg-background font-sans pb-12">
@@ -52,7 +53,7 @@ export default function ManageBookings() {
           </Link>
         </div>
 
-        {isEmpty ? (
+        {!hasAnyBookings ? (
           /* Empty State (Image 2) */
           <div className="flex-1 flex flex-col items-center justify-center mt-20 text-center max-w-md mx-auto">
             <div className="w-20 h-20 rounded-full bg-[#F1E8DC] dark:bg-card flex items-center justify-center text-[#A84A1A] mb-6">
@@ -77,11 +78,7 @@ export default function ManageBookings() {
           <>
             {/* Tabs */}
             <div className="flex space-x-8 border-b border-[#E5E0D8] dark:border-border/40 mb-6">
-              {[
-                { name: "Upcoming", count: 2 },
-                { name: "Past", count: 3 },
-                { name: "Cancelled", count: 1 }
-              ].map(tab => (
+              {tabs.map(tab => (
                 <button
                   key={tab.name}
                   onClick={() => setActiveTab(tab.name)}
@@ -99,6 +96,11 @@ export default function ManageBookings() {
             </div>
 
             {/* Bookings List */}
+            {bookings.length === 0 ? (
+              <p className="text-center text-[14px] font-medium text-[#8C8279] dark:text-muted-foreground py-16">
+                {activeTab === "Past" ? "No past stays yet." : "Nothing here yet."}
+              </p>
+            ) : (
             <div className="space-y-5">
               {bookings.map((booking) => (
                 <div key={booking.id} className="bg-white dark:bg-card rounded-2xl shadow-sm p-4 flex flex-col md:flex-row gap-5 relative">
@@ -117,6 +119,10 @@ export default function ManageBookings() {
                       <div className="flex items-center space-x-3 mb-2">
                         {booking.status === "CONFIRMED" ? (
                           <span className="bg-emerald-50 dark:bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-widest">
+                            {booking.status}
+                          </span>
+                        ) : booking.status === "CANCELLED" ? (
+                          <span className="bg-red-50 dark:bg-red-500/15 text-red-600 dark:text-red-400 px-2.5 py-1 rounded-full text-[9px] font-extrabold uppercase tracking-widest">
                             {booking.status}
                           </span>
                         ) : (
@@ -163,6 +169,10 @@ export default function ManageBookings() {
                           <span>Directions</span>
                         </button>
                       </>
+                    ) : booking.status === "CANCELLED" ? (
+                      <button className="w-full bg-white dark:bg-card border border-[#C8B09A] dark:border-border/40 text-[#A84A1A] hover:bg-[#F8F6F3] dark:hover:bg-muted py-2.5 rounded-full font-bold text-[13px] transition-colors">
+                        View details
+                      </button>
                     ) : (
                       <>
                         <button className="w-full bg-[#A84A1A] hover:bg-[#8F3E15] text-white py-2.5 rounded-full font-bold text-[13px] transition-colors shadow-sm">
@@ -183,6 +193,7 @@ export default function ManageBookings() {
                 </div>
               ))}
             </div>
+            )}
           </>
         )}
       </div>
