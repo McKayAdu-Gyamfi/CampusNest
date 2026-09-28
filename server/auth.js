@@ -29,25 +29,22 @@ export const auth = betterAuth({
     }
   },
 
-  // ── Assign Role Based On Email Domain ─────
+  // ── Assign Default Role On Signup ─────
+  // Every generic sign-up (the public /sign-up/email path) starts as an
+  // unverified STUDENT regardless of email domain. HOSTEL_MANAGER is never
+  // auto-granted here: it is only ever set by the dedicated, explicit
+  // /api/auth/register (registerManager) flow, which issues its own
+  // follow-up UPDATE after this hook runs. Previously any signup with an
+  // email outside ALLOWED_EMAIL_DOMAIN was auto-assigned HOSTEL_MANAGER,
+  // letting anyone self-escalate to a privileged role with zero
+  // verification — that fallback has been removed.
   databaseHooks: {
     user: {
       create: {
         before: (user) => {
-          // If the email has the school domain, set them as STUDENT
-          const allowedDomain = process.env.ALLOWED_EMAIL_DOMAIN || "@ashesi.edu.gh";
-          
-          if (user.email && user.email.toLowerCase().endsWith(allowedDomain.toLowerCase())) {
-            user.user_type = "STUDENT";
-            // The student will need to call /api/users/me/profile-complete to update their details
-            user.profile_complete = false;
-          } else {
-            // Alternatively, other domains can be auto-assigned HOSTEL_MANAGER or default to unverified
-            // Defaulting to HOSTEL_MANAGER based on legacy config fallback unless otherwise specified
-            user.user_type = "HOSTEL_MANAGER";
-            // Set to false initially, requires completion
-            user.profile_complete = false;
-          }
+          user.user_type = "STUDENT";
+          // The student will need to call /api/users/me/profile-complete to update their details
+          user.profile_complete = false;
           return { data: user };
         }
       }
