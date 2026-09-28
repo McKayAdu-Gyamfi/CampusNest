@@ -319,7 +319,69 @@ export const deleteRoomTourScene = async (req, res, next) => {
   }
 };
 
+// POST /api/rooms/:id/tours/generate
+// Orchestrates the panorama pipeline: this is the ONLY caller the
+// temp-pano-api microservice trusts (via a shared internal key never
+// exposed to the browser). Previously the frontend called that service
+// directly with no auth at all and a client-supplied room_id — anyone
+// could generate/overwrite tour data for any room. Now the client uploads
+// here (same requireAuth + verifyRoomOwnership gate as every other room
+// mutation), and this handler is the one that talks to the Python service.
+export const generateRoomTour = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { scene_name, hotspots } = req.body;
+
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: "An equirectangular panorama image is required" });
+    }
+    if (!scene_name) {
+      return res.status(400).json({ success: false, message: "scene_name is required" });
+    }
+
+    const panoApiUrl = process.env.PANO_API_URL;
+    const panoApiKey = process.env.PANO_API_KEY;
+    if (!panoApiUrl || !panoApiKey) {
+      throw new Error("PANO_API_URL/PANO_API_KEY are not configured on this server");
+    }
+
+    const form = new FormData();
+    form.append("room_id", id);
+    if (hotspots) form.append("hotspots", typeof hotspots === "string" ? hotspots : JSON.stringify(hotspots));
+    form.append("image", new Blob([req.file.buffer], { type: req.file.mimetype }), req.file.originalname);
+
+    const panoResponse = await fetch(`${panoApiUrl}/api/panorama/tour`, {
+      method: "POST",
+      headers: { "X-Internal-Key": panoApiKey },
+      body: form,
+    });
+
+    const panoResult = await panoResponse.json().catch(() => ({}));
+    if (!panoResponse.ok) {
+      return res.status(502).json({ success: false, message: panoResult.detail || "Panorama processing failed" });
+    }
+
+    const { data: sceneData, error: sceneError } = await supabase
+      .from("ROOM_TOUR_SCENES")
+      .insert([{
+        room_id: id,
+        scene_name,
+        scene_config_url: panoResult.tour_url,
+      }])
+      .select()
+      .single();
+
+    if (sceneError) throw sceneError;
+
+    res.status(201).json({ success: true, data: sceneData });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // POST /api/rooms/:id/tours
+// Registers a scene from an already-generated config URL directly (e.g. one
+// produced out-of-band) without re-running the panorama pipeline.
 export const createRoomTourScene = async (req, res, next) => {
   try {
     const { id } = req.params;

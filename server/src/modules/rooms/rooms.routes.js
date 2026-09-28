@@ -27,7 +27,10 @@ router.post("/:id/images", requireAuth, verifyRoomOwnership, uploadMiddleware.ar
 // Delete room tour scene route
 router.delete("/:id/tours/:sceneId", requireAuth, verifyRoomOwnership, controllers.deleteRoomTourScene);
 
-// Create room tour scene from frontend result
+// Generate a tour scene from a raw panorama photo (orchestrates temp-pano-api)
+router.post("/:id/tours/generate", requireAuth, verifyRoomOwnership, uploadMiddleware.single("image"), controllers.generateRoomTour);
+
+// Register a scene from an already-generated config URL
 router.post("/:id/tours", requireAuth, verifyRoomOwnership, controllers.createRoomTourScene);
 
 export default router;
