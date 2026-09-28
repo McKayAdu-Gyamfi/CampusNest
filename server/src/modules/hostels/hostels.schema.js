@@ -30,6 +30,16 @@ export const updateHostelSchema = z.object({
     total_rooms: z.number().int().optional(),
     available_rooms: z.number().int().min(0).optional(),
     distance_from_campus: z.number().nonnegative().optional(),
-    manager_id: z.string().optional()
+    // status and manager_id are deliberately not accepted here — see
+    // updateHostelStatusSchema below and hostels.controller.js.
+  })
+});
+
+export const updateHostelStatusSchema = z.object({
+  params: z.object({
+    id: z.string()
+  }),
+  body: z.object({
+    status: z.enum(["PENDING", "APPROVED", "REJECTED"])
   })
 });

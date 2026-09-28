@@ -9,7 +9,12 @@ export const getHostels = async (req, res, next) => {
 
     let query = supabase
       .from("HOSTEL")
-      .select("*, manager:manager_id (id, email)");
+      .select("*, manager:manager_id (id, email)")
+      // Public listing only shows hostels an admin has approved — a
+      // self-registered manager creating a hostel no longer makes it
+      // instantly visible/bookable with zero review. Managers see their
+      // own (any status) via GET /api/users/me/hostels instead.
+      .eq("status", "APPROVED");
 
     if (search) {
       // Strip characters that are structurally significant in a PostgREST
@@ -86,16 +91,17 @@ export const createHostel = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "A manager can only create up to 2 hostels." });
     }
 
-    const payload = { 
-      hostel_name, 
-      location, 
-      description, 
-      total_rooms, 
-      available_rooms: available_rooms ?? 0, 
+    const payload = {
+      hostel_name,
+      location,
+      description,
+      total_rooms,
+      available_rooms: available_rooms ?? 0,
       distance_from_campus,
-      manager_id, 
-      created_at: new Date(), 
-      updated_at: new Date() 
+      manager_id,
+      status: "PENDING", // requires admin approval before appearing in public listings
+      created_at: new Date(),
+      updated_at: new Date()
     };
 
     const { data, error } = await supabase
@@ -115,11 +121,48 @@ export const createHostel = async (req, res, next) => {
 export const updateHostel = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const updatePayload = { ...req.body, updated_at: new Date() };
+    // status/manager_id are intentionally excluded here even though the
+    // caller already owns this hostel — approval and ownership transfer
+    // are admin-only actions (status via PATCH /:id/status below), not
+    // something a manager should be able to set on their own record.
+    const { status, manager_id, ...rest } = req.body;
+    const updatePayload = { ...rest, updated_at: new Date() };
 
     const { data, error } = await supabase
       .from("HOSTEL")
       .update(updatePayload)
+      .eq("id", id)
+      .select()
+      .single();
+
+    if (error) {
+      if (error.code === "PGRST116") {
+        return res.status(404).json({ success: false, message: "Hostel not found" });
+      }
+      throw error;
+    }
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// PATCH /api/hostels/:id/status
+// Admin-only approval gate — the frontend's admin "review queue" concept,
+// which previously had no backend enforcement at all: any self-registered
+// manager's hostel appeared in public listings immediately.
+export const updateHostelStatus = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    if (!["PENDING", "APPROVED", "REJECTED"].includes(status)) {
+      return res.status(400).json({ success: false, message: "status must be PENDING, APPROVED, or REJECTED" });
+    }
+
+    const { data, error } = await supabase
+      .from("HOSTEL")
+      .update({ status, updated_at: new Date() })
       .eq("id", id)
       .select()
       .single();
