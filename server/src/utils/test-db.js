@@ -1,7 +1,7 @@
 import "dotenv/config";
 import { Pool } from "pg";
 
-console.log("Connecting to", process.env.DATABASE_URL);
+console.log("Connecting to database...");
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
 });
