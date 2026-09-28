@@ -16,8 +16,16 @@ import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 const app = express();
 
 app.use(helmet());
+// CORS_ORIGIN supports a comma-separated allowlist (e.g. for a prod domain
+// alongside a staging one). Defaults to the actual Vite dev server port —
+// this was previously hardcoded to :3000, which doesn't match the frontend
+// (Vite's default :5173) at all, silently breaking cross-origin requests
+// with credentials in local dev.
+const allowedOrigins = (process.env.CORS_ORIGIN || "http://localhost:5173")
+  .split(",")
+  .map((o) => o.trim());
 app.use(cors({
-  origin: "http://localhost:3000",
+  origin: allowedOrigins,
   credentials: true,
 }));
 // Custom Auth Routes (must be before Better Auth wildcard)
