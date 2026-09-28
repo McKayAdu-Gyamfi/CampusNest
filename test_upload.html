@@ -10,7 +10,14 @@
 
     <h2>Please upload your picture here</h2>
     <p>It has to be jpeg</p>
+    <p><strong>Dev tool only:</strong> this calls temp-pano-api directly and
+    bypasses the Node backend's auth/ownership checks entirely — it exists
+    to test the microservice in isolation, not as the real upload path
+    (the app uploads via the Node backend's <code>POST /api/rooms/:id/tours/generate</code>).
+    Requires the same INTERNAL_API_KEY the service is configured with.</p>
 
+    <label>Room UUID: <input type="text" id="roomId" placeholder="a valid ROOM.id UUID" size="40"></label><br><br>
+    <label>Internal API key: <input type="password" id="apiKey" placeholder="INTERNAL_API_KEY"></label><br><br>
     <input type="file" id="file" accept="image/png, image/jpeg">
     <button id="uploadBtn">Upload</button>
     <br><br>
@@ -31,18 +38,26 @@ document.getElementById("uploadBtn").addEventListener("click", () => {
         return;
     }
 
-    const file = myFileInput.files[0]; 
+    const roomId = document.getElementById("roomId").value.trim();
+    const apiKey = document.getElementById("apiKey").value;
+    if (!roomId || !apiKey) {
+        alert("Room UUID and internal API key are both required.");
+        return;
+    }
+
+    const file = myFileInput.files[0];
     const formData = new FormData();
-    
-    formData.append("room_id", "lobby_123");
+
+    formData.append("room_id", roomId);
     formData.append("image", file);
 
     console.log("Uploading...");
 
     fetch("http://localhost:10000/api/panorama/tour", {
       method: "POST",
-      mode: "cors", 
-      body: formData 
+      mode: "cors",
+      headers: { "X-Internal-Key": apiKey },
+      body: formData
     })
     .then(response => {
         if (!response.ok) {
