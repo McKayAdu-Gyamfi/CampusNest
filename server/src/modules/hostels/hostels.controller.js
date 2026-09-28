@@ -45,7 +45,12 @@ export const getHostelById = async (req, res, next) => {
       .eq("id", id)
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === "PGRST116") {
+        return res.status(404).json({ success: false, message: "Hostel not found" });
+      }
+      throw error;
+    }
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -113,7 +118,12 @@ export const updateHostel = async (req, res, next) => {
       .select()
       .single();
 
-    if (error) throw error;
+    if (error) {
+      if (error.code === "PGRST116") {
+        return res.status(404).json({ success: false, message: "Hostel not found" });
+      }
+      throw error;
+    }
     res.json({ success: true, data });
   } catch (err) {
     next(err);
