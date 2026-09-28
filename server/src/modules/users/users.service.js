@@ -79,19 +79,11 @@ export const completeProfile = async (userId, data) => {
   const { student_id, course } = data;
   const profileComplete = !!(student_id && course);
 
-  console.log(`[DEBUG completeProfile] Attempting to update userId: "${userId}"`);
-
-  // Debug SELECT to see if Supabase client can see the row
-  const { data: checkData, error: checkError } = await supabase.from('user').select('id').eq('id', userId);
-  console.log(`[DEBUG completeProfile] Pre-update SELECT check:`, checkData, `Error:`, checkError);
-
   const { data: updatedUser, error } = await supabase
     .from("user")
     .update({ student_id, course, profile_complete: profileComplete })
     .eq("id", userId)
     .select();
-
-  console.log(`[DEBUG completeProfile] Update Result:`, updatedUser, `Error:`, error);
 
   if (error) throw new UserServiceError(error.message, 400);
   if (!updatedUser || updatedUser.length === 0) {
@@ -105,15 +97,11 @@ export const completeManagerProfile = async (userId, data) => {
   const { payment_details } = data;
   const profileComplete = !!payment_details;
 
-  console.log(`[DEBUG completeManagerProfile] Attempting to update userId: "${userId}"`);
-
   const { data: updatedUser, error } = await supabase
     .from("user")
     .update({ payment_details, profile_complete: profileComplete })
     .eq("id", userId)
     .select();
-
-  console.log(`[DEBUG completeManagerProfile] Update Result:`, updatedUser, `Error:`, error);
 
   if (error) throw new UserServiceError(error.message, 400);
   if (!updatedUser || updatedUser.length === 0) {
