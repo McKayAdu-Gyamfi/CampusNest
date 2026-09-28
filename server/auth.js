@@ -8,6 +8,13 @@ export const auth = betterAuth({
     connectionString: process.env.DATABASE_URL
   }),
 
+  // ── Origins allowed to complete auth flows / receive session cookies ──
+  // better-auth recommends setting this explicitly rather than relying only
+  // on the app-level CORS allowlist in app.js.
+  trustedOrigins: (process.env.CORS_ORIGIN || "http://localhost:5173")
+    .split(",")
+    .map((o) => o.trim()),
+
   // ── Email/Password Authentication ─────────────
   emailAndPassword: {
     enabled: true,
