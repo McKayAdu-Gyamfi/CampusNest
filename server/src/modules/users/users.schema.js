@@ -3,7 +3,10 @@ import { z } from "zod";
 export const updateUserProfileSchema = z.object({
   body: z.object({
     course: z.string().optional(),
-    current_room_id: z.string().optional(),
+    // current_room_id is intentionally NOT user-settable here — it's only
+    // ever assigned by the system when a booking is confirmed (see
+    // bookings.controller.js). Letting a student set it directly would
+    // move them into any room with no booking, approval, or payment.
     student_id: z.string().optional(), // School issued student ID
     name: z.string().optional(), // Common
     phone: z.string().optional(), // Example additional fields

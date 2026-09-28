@@ -196,6 +196,21 @@ export const updateBookingStatus = async (req, res, next) => {
         .eq("id", roomId);
 
       await syncRoomAvailability(roomId);
+
+      // Keep the student's current_room_id in step with their actual
+      // confirmed booking — this is the only place that field is ever set.
+      if (occupancyChange === 1) {
+        await supabase
+          .from("user")
+          .update({ current_room_id: roomId })
+          .eq("id", booking.student_id);
+      } else if (occupancyChange === -1) {
+        await supabase
+          .from("user")
+          .update({ current_room_id: null })
+          .eq("id", booking.student_id)
+          .eq("current_room_id", roomId);
+      }
     }
 
     res.json({ success: true, data: updatedBooking });
