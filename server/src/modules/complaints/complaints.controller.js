@@ -65,9 +65,24 @@ export const getComplaintById = async (req, res, next) => {
 // POST /api/complaints
 export const createComplaint = async (req, res, next) => {
   try {
-    // If manager_id is mapped later by a trigger or derived from HOSTEL, we allow creation with just student and hostel.
+    const { hostel_id } = req.body;
+
+    const { data: hostel, error: hostelError } = await supabase
+      .from("HOSTEL")
+      .select("manager_id")
+      .eq("id", hostel_id)
+      .single();
+
+    if (hostelError || !hostel) {
+      return res.status(404).json({ success: false, message: "Hostel not found" });
+    }
+
     const payload = {
       ...req.body,
+      // A student can only ever file a complaint as themselves, never on
+      // behalf of another student_id passed in the body.
+      student_id: req.user.user_type === "STUDENT" ? req.user.id : req.body.student_id,
+      hostel_manager_id: hostel.manager_id,
       status: "OPEN",
       created_at: new Date(),
       updated_at: new Date()
@@ -91,6 +106,23 @@ export const updateComplaintStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
     const { status } = req.body;
+
+    const { data: complaint, error: fetchError } = await supabase
+      .from("COMPLAINT")
+      .select("hostel_manager_id")
+      .eq("id", id)
+      .single();
+
+    if (fetchError || !complaint) {
+      return res.status(404).json({ success: false, message: "Complaint not found" });
+    }
+
+    // Only the manager of the hostel this complaint was filed against (or
+    // an admin) can change its status — previously this had no check at
+    // all, so any authenticated user, including a student, could do this.
+    if (req.user.user_type !== "ADMIN" && complaint.hostel_manager_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: "Forbidden: You do not manage the hostel for this complaint" });
+    }
 
     const { data, error } = await supabase
       .from("COMPLAINT")
