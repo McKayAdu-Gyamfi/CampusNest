@@ -38,13 +38,25 @@ export const getBookingById = async (req, res, next) => {
       .from("BOOKING")
       .select(`
         *,
-        ROOM (room_number, hostel_id, HOSTEL (hostel_name)),
+        ROOM (room_number, hostel_id, HOSTEL (hostel_name, manager_id)),
         USERS:student_id (email, profile_complete)
       `)
       .eq("id", id)
       .single();
 
-    if (error) throw error;
+    if (error || !data) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
+    }
+
+    // A booking belongs to the student who made it and the manager of its
+    // hostel — anyone else authenticated shouldn't be able to view it by id.
+    if (req.user.user_type === "STUDENT" && data.student_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: "Forbidden: You do not own this booking" });
+    }
+    if (req.user.user_type === "HOSTEL_MANAGER" && data.ROOM?.HOSTEL?.manager_id !== req.user.id) {
+      return res.status(403).json({ success: false, message: "Forbidden: You do not manage the hostel for this booking" });
+    }
+
     res.json({ success: true, data });
   } catch (err) {
     next(err);
