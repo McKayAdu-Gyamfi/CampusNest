@@ -1,9 +1,18 @@
-import { Link, useLocation, Outlet } from "react-router-dom";
+import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
 import { LayoutGrid, Users, Building, GraduationCap, Box, Sun, ArrowLeft } from "lucide-react";
 import Logo from "./Logo";
+import AdminBottomNav from "./AdminBottomNav";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function AdminLayout() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
+  const { signOut } = useAuth();
+
+  const handleExitAdmin = async () => {
+    await signOut();
+    navigate("/login");
+  };
 
   const navItems = [
     { path: "/admin", label: "Dashboard", icon: LayoutGrid },
@@ -17,7 +26,7 @@ export default function AdminLayout() {
   return (
     <div className="flex min-h-screen bg-[#F4F1EA] dark:bg-background text-foreground font-sans">
       {/* Dark Sidebar */}
-      <aside className="w-[260px] shrink-0 bg-[#251D1A] text-white flex flex-col h-screen sticky top-0 py-7 px-4 select-none z-40">
+      <aside className="hidden lg:flex w-[260px] shrink-0 bg-[#251D1A] text-white flex-col h-screen sticky top-0 py-7 px-4 select-none z-40">
         
         {/* Logo Section */}
         <div className="px-3 pb-6 mb-8 border-b border-solid border-white/20 mx-2">
@@ -60,24 +69,26 @@ export default function AdminLayout() {
           <div className="bg-[#322723] rounded-2xl p-3 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <div className="w-10 h-10 rounded-full bg-[#C56A30] text-white font-extrabold text-sm flex items-center justify-center shrink-0">
-                NA
+                A
               </div>
               <div className="flex flex-col">
-                <span className="font-extrabold text-[14px] text-white leading-tight">Nii Armah</span>
+                <span className="font-extrabold text-[14px] text-white leading-tight">Admin</span>
                 <span className="text-[11px] text-[#A89F99] font-medium">Platform admin</span>
               </div>
             </div>
-            <Link to="/login" title="Exit Admin" className="text-[#A89F99] hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors">
+            <button onClick={handleExitAdmin} title="Exit Admin" className="text-[#A89F99] hover:text-white p-1.5 rounded-lg hover:bg-white/10 transition-colors cursor-pointer">
               <ArrowLeft className="w-4 h-4" />
-            </Link>
+            </button>
           </div>
         </div>
       </aside>
 
       {/* Main Content Area */}
-      <main className="flex-1 p-6 lg:p-8 overflow-x-hidden min-h-screen">
+      <main className="flex-1 p-6 pb-28 lg:pb-8 lg:p-8 overflow-x-hidden min-h-screen">
         <Outlet />
       </main>
+
+      <AdminBottomNav />
     </div>
   );
 }

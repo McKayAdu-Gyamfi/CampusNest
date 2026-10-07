@@ -3,10 +3,16 @@ import { Link } from "react-router-dom";
 import TopNav from "@/components/TopNav";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import { useBookings } from "@/contexts/BookingContext";
+import { useAuth } from "@/contexts/AuthContext";
 // import { TygerAvatar } from 'tyger-avatar';
 
 export default function Profile() {
+  const { signOut } = useAuth();
   const userAvatar = localStorage.getItem("userAvatar");
+  const userName = localStorage.getItem("userName") || "Sarah Adjei";
+  const userUniversity = localStorage.getItem("userUniversity") || "Ashesi";
+  const userLevel = localStorage.getItem("userLevel") || "300";
+  const initials = userName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
   const { bookings } = useBookings();
   const currentBooking = bookings.length > 0 ? bookings[0] : null;
 
@@ -46,15 +52,15 @@ export default function Profile() {
               {userAvatar?.startsWith("http") ? (
                 <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                <span className="text-[#6c5e57]">SA</span>
+                <span className="text-[#6c5e57]">{initials}</span>
               )}
             </div>
             <div>
-              <h2 className="text-[26px] lg:text-[28px] font-extrabold text-white leading-tight mb-1">Sarah Adjei</h2>
+              <h2 className="text-[26px] lg:text-[28px] font-extrabold text-white leading-tight mb-1">{userName}</h2>
               <p className="text-[13px] text-white/80 font-medium mb-4">sarah.adjei@ashesi.edu.gh</p>
               <div className="flex flex-wrap justify-center md:justify-start gap-2">
                 <span className="bg-white/20 backdrop-blur-md text-white font-extrabold text-[12px] px-3.5 py-1.5 rounded-full">
-                  Level 300 · Ashesi
+                  Level {userLevel} · {userUniversity}
                 </span>
                 <span className="bg-[#C56A30] text-white font-extrabold text-[12px] px-3.5 py-1.5 rounded-full">
                   Verified
@@ -164,7 +170,11 @@ export default function Profile() {
             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
           </Link>
 
-          <Link to="/login" className="flex items-center justify-between p-5 hover:bg-red-500/10 transition-colors cursor-pointer group">
+          <Link
+            to="/login"
+            onClick={() => { signOut(); }}
+            className="flex items-center justify-between p-5 hover:bg-red-500/10 transition-colors cursor-pointer group"
+          >
             <div className="flex items-center space-x-4">
               <LogOut className="w-5 h-5 text-red-500" />
               <span className="font-bold text-[15px] text-red-500">Log out</span>

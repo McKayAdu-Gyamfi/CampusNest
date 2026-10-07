@@ -3,12 +3,16 @@ import Logo from "./Logo";
 import { Home, Compass, Bookmark, BedDouble, User, LogOut, Moon } from "lucide-react";
 // import { TygerAvatar } from 'tyger-avatar';
 import { useTheme } from "./theme-provider";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function DesktopSidebar() {
   const { pathname } = useLocation();
   const userAvatar = localStorage.getItem("userAvatar");
+  const userName = localStorage.getItem("userName") || "Sarah Adjei";
+  const initials = userName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
   const { theme, setTheme } = useTheme();
-  
+  const { signOut } = useAuth();
+
   // Define navigation items
   const navItems = [
     { path: "/", label: "Home", icon: Home },
@@ -81,18 +85,18 @@ export default function DesktopSidebar() {
               {userAvatar?.startsWith("http") ? (
                  <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
               ) : (
-                 <span className="text-[#6c5e57] font-bold text-[16px]">SA</span>
+                 <span className="text-[#6c5e57] font-bold text-[16px]">{initials}</span>
               )}
             </div>
             <div className="flex flex-col opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap">
-              <span className="font-bold text-[15px] text-foreground leading-tight">Sarah Adjei</span>
+              <span className="font-bold text-[15px] text-foreground leading-tight">{userName}</span>
               <span className="text-[12px] font-medium text-muted-foreground">Student</span>
             </div>
           </Link>
           <Link 
             to="/login" 
             title="Log out"
-            onClick={() => localStorage.removeItem("userAvatar")}
+            onClick={() => { signOut(); }}
             className="opacity-0 group-hover:opacity-100 transition-all duration-300 text-muted-foreground hover:text-red-500 p-2 rounded-full hover:bg-red-500/10 cursor-pointer"
           >
             <LogOut className="w-5 h-5 shrink-0" />
