@@ -93,8 +93,8 @@ export default function Profile() {
                 <div>
                   <div className="flex items-center space-x-2 mb-1">
                     <h4 className="font-extrabold text-[18px] text-foreground">{currentBooking.hostelName}</h4>
-                    <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center space-x-1 ${currentBooking.status === 'Approved' ? 'bg-[#E6F4EA] text-[#137333]' : 'bg-amber-100 text-amber-700'}`}>
-                      <span className={`w-1.5 h-1.5 rounded-full ${currentBooking.status === 'Approved' ? 'bg-[#137333]' : 'bg-amber-500'}`} />
+                    <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center space-x-1 ${currentBooking.status === 'CONFIRMED' ? 'bg-[#E6F4EA] text-[#137333]' : 'bg-amber-100 text-amber-700'}`}>
+                      <span className={`w-1.5 h-1.5 rounded-full ${currentBooking.status === 'CONFIRMED' ? 'bg-[#137333]' : 'bg-amber-500'}`} />
                       <span className="uppercase">{currentBooking.status}</span>
                     </span>
                   </div>
