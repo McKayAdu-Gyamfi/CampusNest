@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useState, useCallback, useRef, type ReactNode } from "react";
 import { getMe, signOutApi, type BackendUser } from "@/lib/auth";
 import { ApiError } from "@/lib/apiClient";
 
@@ -38,7 +38,7 @@ interface AuthContextValue {
   user: AuthUser | null;
   isLoading: boolean;
   signOut: () => Promise<void>;
-  refetch: () => Promise<void>;
+  refetch: () => Promise<AuthUser | null>;
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -55,13 +55,22 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   );
   const [isLoading, setIsLoading] = useState(!cachedRole);
 
-  const refetch = useCallback(async () => {
+  // Guards against a slow, superseded getMe() response overwriting state
+  // set by a newer call (e.g. the initial mount fetch resolving after a
+  // post-login refetch() already confirmed the session).
+  const requestSeqRef = useRef(0);
+
+  const refetch = useCallback(async (): Promise<AuthUser | null> => {
+    const seq = ++requestSeqRef.current;
     try {
       const backendUser = await getMe();
+      if (seq !== requestSeqRef.current) return null; // superseded — ignore this stale result
       const authUser = toAuthUser(backendUser);
       setUser(authUser);
       localStorage.setItem(ROLE_CACHE_KEY, authUser.role);
+      return authUser;
     } catch (err) {
+      if (seq !== requestSeqRef.current) return null; // superseded — ignore this stale result
       // 401 (no session / expired) or any other failure: there is no
       // confirmed session, so don't leave a stale cached role around —
       // every real backend endpoint would reject this session anyway.
@@ -73,8 +82,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         // rather than hanging or throwing.
         console.error("[AuthProvider] Could not reach the backend:", err);
       }
+      return null;
     } finally {
-      setIsLoading(false);
+      if (seq === requestSeqRef.current) setIsLoading(false);
     }
   }, []);
 
@@ -94,6 +104,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
     setUser(null);
     localStorage.removeItem(ROLE_CACHE_KEY);
+    // Clear legacy mock-profile keys too, so a shared browser doesn't show
+    // the previous user's name/email/phone/avatar to whoever signs in next.
+    localStorage.removeItem("userAvatar");
+    localStorage.removeItem("userName");
+    localStorage.removeItem("userEmail");
+    localStorage.removeItem("userPhone");
+    localStorage.removeItem("userUniversity");
+    localStorage.removeItem("userLevel");
+    localStorage.removeItem("userBio");
+    localStorage.removeItem("userProgram");
   }, []);
 
   return (

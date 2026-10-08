@@ -24,7 +24,7 @@ interface ApiEnvelope<T> {
  * message). A network-level failure (backend unreachable) is NOT wrapped —
  * it propagates as whatever error `fetch` itself throws, since there's no
  * HTTP response to read a status/message from. Callers should distinguish
- * the two: `catch (e) { if (e instanceof ApiError) ... else /* network */ }`.
+ * the two by checking `e instanceof ApiError`.
  */
 export async function apiFetch<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
   const res = await fetch(`${API_BASE}${path}`, {

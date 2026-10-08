@@ -67,22 +67,36 @@ export default function Login() {
     try {
       if (role === "manager") {
         if (authMode === "signup") {
+          // registerManager doesn't establish a session on its own
+          // (server has autoSignIn disabled) — sign in right after.
           await registerManager(email, password, fullName || undefined);
+          await signInEmail(email, password);
         } else {
           await signInEmail(email, password);
         }
-        await refetch();
+        const authedUser = await refetch();
+        if (!authedUser) {
+          setFormError("Signed in, but couldn't load your account. Please try again.");
+          return;
+        }
         navigate("/manager");
         return;
       }
 
       // Student path
       if (authMode === "signup") {
+        // signUpStudent doesn't establish a session on its own
+        // (server has autoSignIn disabled) — sign in right after.
         await signUpStudent(email, password, fullName || undefined);
+        await signInEmail(email, password);
       } else {
         await signInEmail(email, password);
       }
-      await refetch();
+      const authedUser = await refetch();
+      if (!authedUser) {
+        setFormError("Signed in, but couldn't load your account. Please try again.");
+        return;
+      }
 
       if (authMode === "signup") {
         // New account — continue to the (cosmetic, frontend-only) avatar
@@ -104,7 +118,11 @@ export default function Login() {
 
   const handleComplete = () => {
     // The avatar picker is cosmetic only — the account already exists by
-    // this point (created during the signup call in handleLoginClick).
+    // this point (created during the signup call in handleLoginClick) —
+    // but still persist the chosen color so the UI can show it.
+    if (selectedAvatar) {
+      localStorage.setItem("userAvatar", selectedAvatar);
+    }
     navigate("/");
   };
 
