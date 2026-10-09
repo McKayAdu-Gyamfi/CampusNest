@@ -4,8 +4,12 @@ import pg from "pg";
 export const auth = betterAuth({
 
   // ── Tell BetterAuth to use your Supabase DB ──────────────
+  // family: 4 forces IPv4 — Supabase's pooler hostname also resolves to an
+  // IPv6 address, and on networks without real IPv6 routing that attempt
+  // fails with ENETUNREACH before Node falls back to IPv4.
   database: new pg.Pool({
-    connectionString: process.env.DATABASE_URL
+    connectionString: process.env.DATABASE_URL,
+    family: 4
   }),
 
   // ── Origins allowed to complete auth flows / receive session cookies ──
