@@ -14,6 +14,13 @@ export default defineSchema({
     course: v.optional(v.string()),
     current_room_id: v.optional(v.id("rooms")),
     payment_details: v.optional(v.string()),
+    // better-auth always writes these on every model; stored as epoch ms
+    // (Convex has no native Date type) via the adapter's date transform.
+    // Optional in the schema (not required) so Tasks 3-6's own unit tests,
+    // which construct records directly without going through better-auth,
+    // don't need updating to supply them.
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
   }).index("by_email", ["email"]),
 
   sessions: defineTable({
@@ -22,6 +29,8 @@ export default defineSchema({
     ipAddress: v.optional(v.string()),
     userAgent: v.optional(v.string()),
     userId: v.id("users"),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
   })
     .index("by_token", ["token"])
     .index("by_userId", ["userId"]),
@@ -37,6 +46,8 @@ export default defineSchema({
     refreshTokenExpiresAt: v.optional(v.number()),
     scope: v.optional(v.string()),
     password: v.optional(v.string()),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
   })
     .index("by_userId", ["userId"])
     .index("by_providerId_accountId", ["providerId", "accountId"]),
@@ -45,6 +56,8 @@ export default defineSchema({
     identifier: v.string(),
     value: v.string(),
     expiresAt: v.number(),
+    createdAt: v.optional(v.number()),
+    updatedAt: v.optional(v.number()),
   }).index("by_identifier", ["identifier"]),
 
   // Minimal stub — current_room_id above must reference a real table in
