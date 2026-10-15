@@ -20,6 +20,18 @@ describe("users CRUD", () => {
     expect(found!.name).toBe("Alice");
   });
 
+  it("findOne's returned object has no raw _id/_creationTime alongside id (Important fix)", async () => {
+    const t = convexTest(schema, modules);
+    await t.mutation(api.users.create, {
+      data: { name: "Frank", email: "frank@test.com", emailVerified: false, user_type: "STUDENT", profile_complete: false },
+    });
+    const found = await t.query(api.users.findOne, { where: [{ field: "email", value: "frank@test.com" }] });
+    expect(found).not.toBeNull();
+    expect(found).not.toHaveProperty("_id");
+    expect(found).not.toHaveProperty("_creationTime");
+    expect(found!.id).toBeTruthy();
+  });
+
   it("findOne returns null when nothing matches (Review Focus #1)", async () => {
     const t = convexTest(schema, modules);
     const found = await t.query(api.users.findOne, { where: [{ field: "email", value: "nobody@test.com" }] });
