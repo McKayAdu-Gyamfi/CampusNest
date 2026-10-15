@@ -34,4 +34,14 @@ describe("matchesWhere", () => {
       /unsupported where operator "contains"/i
     );
   });
+
+  it("throws for an unsupported operator even when an earlier clause already fails to match", () => {
+    const doc = { email: "x" };
+    expect(() =>
+      matchesWhere(doc, [
+        { field: "email", value: "y" },
+        { field: "a", value: 1, operator: "contains" },
+      ])
+    ).toThrow(/unsupported where operator "contains"/i);
+  });
 });
