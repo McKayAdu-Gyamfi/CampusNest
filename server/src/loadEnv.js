@@ -9,6 +9,14 @@
 // import — only `import` statements get hoisted ahead of a module's own
 // code in ES modules; plain function calls do not, which was the bug this
 // file fixes.
+//
+// Paths are resolved relative to THIS file (not process.cwd()) — a plain
+// relative path would silently find nothing (and leave CONVEX_URL unset)
+// if the process is ever started from the repo root instead of server/.
 import dotenv from "dotenv";
-dotenv.config({ path: ".env.local" });
-dotenv.config();
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const here = path.dirname(fileURLToPath(import.meta.url));
+dotenv.config({ path: path.resolve(here, "../.env.local") });
+dotenv.config({ path: path.resolve(here, "../.env") });

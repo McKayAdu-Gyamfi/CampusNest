@@ -22,11 +22,19 @@ export const auth = betterAuth({
   // ── Expose Custom Fields in Response ────────
   user: {
     additionalFields: {
+      // input: false blocks these from better-auth's own generic
+      // /api/auth/update-user endpoint — without it, any signed-in user
+      // could POST {"user_type":"ADMIN"} there and grant themselves admin,
+      // or flip profile_complete to bypass requireCompleteProfile. Only
+      // databaseHooks (on create) and this app's own server-side logic
+      // (registerManager, the profile-completion endpoints) may set these.
       user_type: {
         type: "string",
+        input: false,
       },
       profile_complete: {
         type: "boolean",
+        input: false,
       },
       payment_details: {
         type: "string",

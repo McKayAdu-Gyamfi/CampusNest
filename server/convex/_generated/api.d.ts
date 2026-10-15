@@ -9,6 +9,7 @@
  */
 
 import type * as accounts from "../accounts.js";
+import type * as lib_secureFunction from "../lib/secureFunction.js";
 import type * as lib_toApiDoc from "../lib/toApiDoc.js";
 import type * as lib_whereMatch from "../lib/whereMatch.js";
 import type * as sessions from "../sessions.js";
@@ -23,6 +24,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   accounts: typeof accounts;
+  "lib/secureFunction": typeof lib_secureFunction;
   "lib/toApiDoc": typeof lib_toApiDoc;
   "lib/whereMatch": typeof lib_whereMatch;
   sessions: typeof sessions;

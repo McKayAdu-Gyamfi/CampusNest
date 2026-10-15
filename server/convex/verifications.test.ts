@@ -5,28 +5,37 @@ import schema from "./schema";
 import { api } from "./_generated/api";
 
 const modules = import.meta.glob("./**/*.ts");
+const secret = process.env.CONVEX_ADAPTER_SECRET;
 
 describe("verifications CRUD", () => {
   it("create then findOne by identifier returns the verification", async () => {
     const t = convexTest(schema, modules);
     const created = await t.mutation(api.verifications.create, {
       data: { identifier: "reset:eve@test.com", value: "otp-123", expiresAt: Date.now() + 100000 },
+      secret,
     });
     expect(created.id).toBeTruthy();
 
-    const found = await t.query(api.verifications.findOne, { where: [{ field: "identifier", value: "reset:eve@test.com" }] });
+    const found = await t.query(api.verifications.findOne, { where: [{ field: "identifier", value: "reset:eve@test.com" }], secret });
     expect(found).not.toBeNull();
     expect(found!.value).toBe("otp-123");
   });
 
   it("findOne returns null for an unknown identifier (Review Focus #1)", async () => {
     const t = convexTest(schema, modules);
-    const found = await t.query(api.verifications.findOne, { where: [{ field: "identifier", value: "nothing" }] });
+    const found = await t.query(api.verifications.findOne, { where: [{ field: "identifier", value: "nothing" }], secret });
     expect(found).toBeNull();
   });
 
   it("delete on a non-matching where is a no-op (Review Focus #4)", async () => {
     const t = convexTest(schema, modules);
-    await expect(t.mutation(api.verifications.delete, { where: [{ field: "identifier", value: "ghost" }] })).resolves.not.toThrow();
+    await expect(t.mutation(api.verifications.delete, { where: [{ field: "identifier", value: "ghost" }], secret })).resolves.not.toThrow();
+  });
+
+  it("findOne rejects a missing/wrong secret (Critical security fix)", async () => {
+    const t = convexTest(schema, modules);
+    await expect(
+      t.query(api.verifications.findOne, { where: [{ field: "identifier", value: "reset:eve@test.com" }], secret: "wrong-secret" })
+    ).rejects.toThrow(/unauthorized/i);
   });
 });

@@ -30,6 +30,14 @@ Express's routes, controllers, and middleware structure **do not change** — on
 - Data migration/backfill from the existing Supabase Postgres — this is effectively a fresh start (no production data exists yet to carry over); Sub-project 1 ships with an empty Convex database.
 - Removing the `pg`/`@better-auth/...` Postgres-adapter dependencies from `package.json` — left in place until all sub-projects land, to keep the branch easy to compare against `client` throughout.
 
+## Known Limitations — do not deploy this branch alone
+
+Found during final review, not in original scope:
+
+- **Only auth tables moved.** `users`/`sessions`/`accounts`/`verifications` live in Convex now; HOSTEL/ROOM/BOOKING/REVIEW/COMPLAINT/amenity/bank-account data is still Supabase Postgres. Any controller that joins across a Supabase table and Supabase's old `user` table (profile, bookings, manager registration, complaints, hostels, reviews, bank accounts) will break if this branch ships alone, because better-auth's users now live in Convex, not in the Supabase `user` table those controllers query against.
+- **Convex functions require a shared secret.** Every `convex/*.ts` query/mutation is wrapped in `secureQuery`/`secureMutation` (`server/convex/lib/secureFunction.ts`), checked against `CONVEX_ADAPTER_SECRET`. This env var must be set both in `server/.env` (for `server/auth-convex-adapter.js`) and on the Convex deployment itself (`npx convex env set CONVEX_ADAPTER_SECRET <value>`) before anything works. Losing or rotating one side without the other breaks every auth call.
+- **This branch is Sub-project 1 only.** It is not meant to merge to `main`/`client` standalone — it's a foundation for Sub-projects 2-4 (core data modules, remaining modules, file storage). Merging it alone would ship a server where sign-up/sign-in work but most of the app's data layer still points at Supabase against a stale/incompatible user reference.
+
 ## Architecture
 
 ### Branch

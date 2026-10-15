@@ -20,6 +20,7 @@
 - Every CRUD function file's automated gate is `node --check` (server has no existing auth tests to extend, and Convex functions aren't runnable outside a live deployment anyway — real verification is the manual end-to-end steps in the final task).
 - Commit messages end with `Co-Authored-By: Claude Sonnet 5 <noreply@anthropic.com>`. Stage this plan's own files only per task.
 - `temp-pano-api` is untouched — permanently out of scope for this whole migration.
+- **Do not deploy/merge this branch alone.** See the spec's "Known Limitations" section (added post-final-review): only auth tables (users/sessions/accounts/verifications) are on Convex; every other controller still reads Supabase's old `user` table, and all Convex functions now require `CONVEX_ADAPTER_SECRET` set on both `server/.env` and the Convex deployment.
 
 ## Review Focus
 
