@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
 import { matchesWhere, validateWhere, type WhereClause } from "./lib/whereMatch";
 import { toApiDoc } from "./lib/toApiDoc";
+import { applySort } from "./lib/applySort";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
 
 const whereValidator = v.array(v.object({ field: v.string(), value: v.any(), operator: v.optional(v.string()) }));
@@ -56,9 +57,6 @@ export const findOne = secureQuery({ where: whereValidator }, async (ctx, { wher
 export const findMany = secureQuery(
   { where: whereValidator, limit: v.optional(v.number()), sortBy: v.optional(v.any()) },
   async (ctx, { where, limit, sortBy }) => {
-    if (sortBy !== undefined) {
-      throw new Error("convex accounts.findMany: sortBy is not supported by this adapter");
-    }
     const w = where as WhereClause[];
     validateWhere(w);
 
@@ -67,13 +65,15 @@ export const findMany = secureQuery(
         .query("accounts")
         .withIndex("by_userId", (q: any) => q.eq("userId", w[0].value as Id<"users">))
         .collect();
-      const sliced = limit ? docs.slice(0, limit) : docs;
+      const sorted = applySort(docs, sortBy);
+      const sliced = limit ? sorted.slice(0, limit) : sorted;
       return sliced.map((doc: any) => toApiDoc(doc));
     }
 
     const all = await ctx.db.query("accounts").collect();
     const matches = w.length === 0 ? all : all.filter((doc: any) => matchesWhere({ ...doc, id: doc._id }, w));
-    const sliced = limit ? matches.slice(0, limit) : matches;
+    const sorted = applySort(matches, sortBy);
+    const sliced = limit ? sorted.slice(0, limit) : sorted;
     return sliced.map((doc: any) => toApiDoc(doc));
   }
 );

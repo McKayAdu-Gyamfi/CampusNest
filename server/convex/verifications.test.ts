@@ -32,6 +32,34 @@ describe("verifications CRUD", () => {
     await expect(t.mutation(api.verifications.delete, { where: [{ field: "identifier", value: "ghost" }], secret })).resolves.not.toThrow();
   });
 
+  it("findMany honors sortBy+limit (better-auth's findVerificationValue call shape — regression test for the re-review finding)", async () => {
+    const t = convexTest(schema, modules);
+    await t.mutation(api.verifications.create, {
+      data: { identifier: "reset:same@test.com", value: "old", expiresAt: Date.now() + 1000, createdAt: 1000 },
+      secret,
+    });
+    await t.mutation(api.verifications.create, {
+      data: { identifier: "reset:same@test.com", value: "new", expiresAt: Date.now() + 2000, createdAt: 2000 },
+      secret,
+    });
+
+    const latest = await t.query(api.verifications.findMany, {
+      where: [{ field: "identifier", value: "reset:same@test.com" }],
+      sortBy: { field: "createdAt", direction: "desc" },
+      limit: 1,
+      secret,
+    });
+    expect(latest).toHaveLength(1);
+    expect(latest[0].value).toBe("new");
+  });
+
+  it("findMany rejects an unsupported sortBy shape", async () => {
+    const t = convexTest(schema, modules);
+    await expect(
+      t.query(api.verifications.findMany, { where: [], sortBy: "createdAt", secret })
+    ).rejects.toThrow(/unsupported sortby/i);
+  });
+
   it("findOne rejects a missing/wrong secret (Critical security fix)", async () => {
     const t = convexTest(schema, modules);
     await expect(
