@@ -1,4 +1,11 @@
-import "dotenv/config";
+// .env.local is where `npx convex dev` auto-writes CONVEX_DEPLOYMENT/
+// CONVEX_URL/CONVEX_SITE_URL (its own convention, so it can keep rewriting
+// this file on every deploy without touching the user's own .env). Load it
+// first, then .env for everything else — dotenv never overrides a key
+// that's already set, so .env can't clobber Convex's own values.
+import dotenv from "dotenv";
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 import app from "./app.js";
 import { supabase } from "./config/db.js";
 
