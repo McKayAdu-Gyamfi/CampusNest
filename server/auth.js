@@ -1,16 +1,10 @@
 import { betterAuth } from "better-auth";
-import pg from "pg";
+import { convexAdapter } from "./auth-convex-adapter.js";
 
 export const auth = betterAuth({
 
-  // ── Tell BetterAuth to use your Supabase DB ──────────────
-  // family: 4 forces IPv4 — Supabase's pooler hostname also resolves to an
-  // IPv6 address, and on networks without real IPv6 routing that attempt
-  // fails with ENETUNREACH before Node falls back to IPv4.
-  database: new pg.Pool({
-    connectionString: process.env.DATABASE_URL,
-    family: 4
-  }),
+  // ── Tell BetterAuth to use Convex instead of Postgres ────
+  database: convexAdapter(),
 
   // ── Origins allowed to complete auth flows / receive session cookies ──
   // better-auth recommends setting this explicitly rather than relying only
