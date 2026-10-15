@@ -5,7 +5,7 @@ export interface WhereClause {
   operator?: string;
 }
 
-export function matchesWhere(doc: Record<string, unknown>, where: WhereClause[]): boolean {
+export function validateWhere(where: WhereClause[]): void {
   for (const clause of where) {
     if (clause.operator && clause.operator !== "eq") {
       throw new Error(
@@ -13,5 +13,9 @@ export function matchesWhere(doc: Record<string, unknown>, where: WhereClause[])
       );
     }
   }
+}
+
+export function matchesWhere(doc: Record<string, unknown>, where: WhereClause[]): boolean {
+  validateWhere(where);
   return where.every((clause) => doc[clause.field] === clause.value);
 }
