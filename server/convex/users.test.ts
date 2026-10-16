@@ -95,4 +95,73 @@ describe("users CRUD", () => {
       t.query(api.users.findOne, { where: [{ field: "email", value: "alice@test.com" }], secret: "wrong-secret" })
     ).rejects.toThrow(/unauthorized/i);
   });
+
+  it("getMeWithRoom returns the user with a null ROOM when no current room", async () => {
+    const t = convexTest(schema, modules);
+    const user = await t.mutation(api.users.create, {
+      data: { name: "Ama", email: "ama@test.com", emailVerified: false, user_type: "STUDENT", profile_complete: false },
+      secret,
+    });
+    const me = await t.query(api.users.getMeWithRoom, { id: user.id, secret });
+    expect(me).not.toBeNull();
+    expect(me!.email).toBe("ama@test.com");
+    expect(me!.ROOM).toBeNull();
+  });
+
+  it("getMeWithRoom nests ROOM.HOSTEL.hostel_name for a student with a current room", async () => {
+    const t = convexTest(schema, modules);
+    const user = await t.mutation(api.users.create, {
+      data: { name: "Ama", email: "ama2@test.com", emailVerified: false, user_type: "STUDENT", profile_complete: false },
+      secret,
+    });
+    const ids = await t.run(async (ctx) => {
+      const hostelId = await ctx.db.insert("hostels", {
+        hostel_name: "Unity Hall", location: "North Campus", total_rooms: 1, available_rooms: 1,
+        status: "APPROVED", created_at: Date.now(), updated_at: Date.now(),
+      });
+      const roomId = await ctx.db.insert("rooms", {
+        room_number: "A1", room_type: "SINGLE", price_per_bed: 400, capacity: 1,
+        current_occupancy: 0, is_available: true, hostel_id: hostelId,
+        created_at: Date.now(), updated_at: Date.now(),
+      });
+      await ctx.db.patch(ctx.db.normalizeId("users", user.id)!, { current_room_id: roomId });
+      return { roomId };
+    });
+
+    const me = await t.query(api.users.getMeWithRoom, { id: user.id, secret });
+    expect(me!.ROOM.room_number).toBe("A1");
+    expect(me!.ROOM.HOSTEL.hostel_name).toBe("Unity Hall");
+    expect(ids.roomId).toBeTruthy();
+  });
+
+  it("getMeWithRoom returns null for a malformed id instead of throwing (Review Focus #1)", async () => {
+    const t = convexTest(schema, modules);
+    const me = await t.query(api.users.getMeWithRoom, { id: "not-a-real-id", secret });
+    expect(me).toBeNull();
+  });
+
+  it("getProfileComplete reports the flag, and null for an unknown user", async () => {
+    const t = convexTest(schema, modules);
+    const user = await t.mutation(api.users.create, {
+      data: { name: "Kojo", email: "kojo@test.com", emailVerified: false, user_type: "STUDENT", profile_complete: true },
+      secret,
+    });
+    expect(await t.query(api.users.getProfileComplete, { id: user.id, secret })).toEqual({ profile_complete: true });
+    expect(await t.query(api.users.getProfileComplete, { id: "bogus", secret })).toBeNull();
+  });
+
+  it("updateProfile patches only the given fields and returns ISO timestamps", async () => {
+    const t = convexTest(schema, modules);
+    const user = await t.mutation(api.users.create, {
+      data: { name: "Esi", email: "esi@test.com", emailVerified: false, user_type: "STUDENT",
+              profile_complete: false, createdAt: Date.now(), updatedAt: Date.now() },
+      secret,
+    });
+    const updated = await t.mutation(api.users.updateProfile, {
+      id: user.id, patch: { student_id: "UG-123", course: "CS", profile_complete: true }, secret,
+    });
+    expect(updated!.student_id).toBe("UG-123");
+    expect(updated!.name).toBe("Esi");
+    expect(typeof updated!.createdAt).toBe("string");
+  });
 });

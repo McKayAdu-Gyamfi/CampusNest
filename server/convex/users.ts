@@ -4,6 +4,7 @@ import { matchesWhere, validateWhere, type WhereClause } from "./lib/whereMatch"
 import { toApiDoc } from "./lib/toApiDoc";
 import { applySort } from "./lib/applySort";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
+import { toApiRow } from "./lib/toApiRow";
 
 const whereValidator = v.array(v.object({ field: v.string(), value: v.any(), operator: v.optional(v.string()) }));
 
@@ -75,3 +76,50 @@ export const delete_ = secureMutation({ where: whereValidator }, async (ctx, { w
 });
 
 export { delete_ as delete };
+
+// Business-facing user reads. These use toApiRow (ISO timestamps, `id`),
+// unlike the better-auth adapter paths above which use toApiDoc.
+
+export const getMeWithRoom = secureQuery({ id: v.string() }, async (ctx, { id }) => {
+  const userId = ctx.db.normalizeId("users", id);
+  if (!userId) return null;
+  const user = await ctx.db.get(userId);
+  if (!user) return null;
+
+  const row = toApiRow(user);
+  row.ROOM = null;
+  if (user.current_room_id) {
+    const room = await ctx.db.get(user.current_room_id);
+    if (room) {
+      const hostel = await ctx.db.get(room.hostel_id);
+      row.ROOM = {
+        room_number: room.room_number,
+        HOSTEL: hostel ? { hostel_name: hostel.hostel_name } : null,
+      };
+    }
+  }
+  return row;
+});
+
+export const getProfileComplete = secureQuery({ id: v.string() }, async (ctx, { id }) => {
+  const userId = ctx.db.normalizeId("users", id);
+  if (!userId) return null;
+  const user = await ctx.db.get(userId);
+  if (!user) return null;
+  return { profile_complete: user.profile_complete };
+});
+
+export const updateProfile = secureMutation({ id: v.string(), patch: v.any() }, async (ctx, { id, patch }) => {
+  const userId = ctx.db.normalizeId("users", id);
+  if (!userId) return null;
+  const existing = await ctx.db.get(userId);
+  if (!existing) return null;
+  await ctx.db.patch(userId, { ...patch, updatedAt: Date.now() });
+  const updated = await ctx.db.get(userId);
+  return updated ? toApiRow(updated) : null;
+});
+
+export const listAll = secureQuery({}, async (ctx) => {
+  const users = await ctx.db.query("users").collect();
+  return users.map((u: any) => toApiRow(u));
+});
