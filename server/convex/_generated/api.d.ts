@@ -12,6 +12,7 @@ import type * as accounts from "../accounts.js";
 import type * as lib_applySort from "../lib/applySort.js";
 import type * as lib_secureFunction from "../lib/secureFunction.js";
 import type * as lib_toApiDoc from "../lib/toApiDoc.js";
+import type * as lib_toApiRow from "../lib/toApiRow.js";
 import type * as lib_whereMatch from "../lib/whereMatch.js";
 import type * as sessions from "../sessions.js";
 import type * as users from "../users.js";
@@ -28,6 +29,7 @@ declare const fullApi: ApiFromModules<{
   "lib/applySort": typeof lib_applySort;
   "lib/secureFunction": typeof lib_secureFunction;
   "lib/toApiDoc": typeof lib_toApiDoc;
+  "lib/toApiRow": typeof lib_toApiRow;
   "lib/whereMatch": typeof lib_whereMatch;
   sessions: typeof sessions;
   users: typeof users;

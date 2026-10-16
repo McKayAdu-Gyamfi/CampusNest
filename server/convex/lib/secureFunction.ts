@@ -1,4 +1,4 @@
-import { query, mutation } from "../_generated/server";
+import { query, mutation, action } from "../_generated/server";
 import { v } from "convex/values";
 
 // Every query/mutation Convex exposes from this directory is PUBLIC by
@@ -36,6 +36,20 @@ export function secureQuery(args: Record<string, any>, handler: (ctx: any, args:
 
 export function secureMutation(args: Record<string, any>, handler: (ctx: any, args: any) => any) {
   return mutation({
+    args: { ...args, secret: v.string() },
+    handler: async (ctx: any, allArgs: any) => {
+      const { secret, ...rest } = allArgs;
+      checkSecret(secret);
+      return await handler(ctx, rest);
+    },
+  });
+}
+
+// File storage needs an action (ctx.storage.store is not available in a
+// mutation), so it needs its own wrapper — secureQuery/secureMutation
+// wrap the query/mutation builders specifically.
+export function secureAction(args: Record<string, any>, handler: (ctx: any, args: any) => any) {
+  return action({
     args: { ...args, secret: v.string() },
     handler: async (ctx: any, allArgs: any) => {
       const { secret, ...rest } = allArgs;
