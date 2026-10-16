@@ -9,6 +9,7 @@
  */
 
 import type * as accounts from "../accounts.js";
+import type * as amenities from "../amenities.js";
 import type * as lib_applySort from "../lib/applySort.js";
 import type * as lib_secureFunction from "../lib/secureFunction.js";
 import type * as lib_toApiDoc from "../lib/toApiDoc.js";
@@ -26,6 +27,7 @@ import type {
 
 declare const fullApi: ApiFromModules<{
   accounts: typeof accounts;
+  amenities: typeof amenities;
   "lib/applySort": typeof lib_applySort;
   "lib/secureFunction": typeof lib_secureFunction;
   "lib/toApiDoc": typeof lib_toApiDoc;
