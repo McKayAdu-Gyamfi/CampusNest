@@ -9,15 +9,20 @@ class AmenityServiceError extends Error {
   }
 }
 
-// The Convex mutations throw this exact message when a (parent, name) pair
-// already exists — the replacement for Postgres' 23505 unique violation.
-const DUPLICATE_MESSAGE = "One or more of these amenities is already added";
-
+// The Convex mutations throw a ConvexError carrying a structured `data.code`
+// (production deployments redact plain Error messages, so the code is the
+// only signal that survives the transport). The user-facing text lives here.
 const wrapError = (error) => {
-  if (error.message && error.message.includes(DUPLICATE_MESSAGE)) {
-    return new AmenityServiceError(DUPLICATE_MESSAGE, 409);
+  switch (error?.data?.code) {
+    case "DUPLICATE_AMENITY":
+      return new AmenityServiceError("One or more of these amenities is already added", 409);
+    case "HOSTEL_NOT_FOUND":
+      return new AmenityServiceError("Hostel not found", 404);
+    case "ROOM_NOT_FOUND":
+      return new AmenityServiceError("Room not found", 404);
+    default:
+      return new AmenityServiceError(error.message, 400);
   }
-  return new AmenityServiceError(error.message, 400);
 };
 
 export const updateHostelAmenities = async (hostelId, amenities) => {
