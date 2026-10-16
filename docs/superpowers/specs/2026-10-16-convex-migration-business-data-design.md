@@ -12,6 +12,8 @@ This spec closes that gap by finishing the migration: all 11 business tables mov
 
 **Deadline:** a demo on Sunday 2026-10-18. The approach below was chosen with that in mind and the sequencing section names the cut line if time runs short.
 
+**How exposed the response shapes actually are (checked, 2026-10-16):** only `client/src/contexts/AuthContext.tsx`, `client/src/pages/Login.tsx`, and `client/src/lib/apiClient.ts` call the backend. Every other page — Explore, Home, Booking, the manager pages, AdminHostels — still renders local mock arrays whose fields (`h.rating: 'Pending review'`, `h.school`, `h.beds`) never existed in the API. So no live page breaks if a business-endpoint shape shifts. The shape contract below is therefore about not forcing the frontend work still to come to learn a second shape, and about keeping manual/Postman testing valid — not about protecting a working screen. Confirmed decision: keep the PostgREST shapes exactly, rather than taking the opportunity to rename keys.
+
 ## Goals
 
 - All 11 business tables defined in `server/convex/schema.ts` with indexes on every foreign key and every currently-filtered field.
@@ -258,6 +260,7 @@ Error-handling change, applied consistently: controllers stop branching on Postg
 Postgres `ON DELETE CASCADE` has no Convex equivalent, so the reachable cascades are explicit:
 
 - `rooms.remove({ id })` → deletes the room's `roomImages`, `roomTourScenes`, `roomAmenities`, and `bookings`; clears `users.current_room_id` for any user pointing at it; decrements the hostel's `total_rooms` and (if the room was available) `available_rooms`.
+  Confirmed decision: this reproduces `ON DELETE CASCADE` exactly, including that deleting a room destroys its `PENDING`/`CONFIRMED` bookings without warning. Refusing deletion when active bookings exist was considered and explicitly declined, to keep behavior identical to today.
 - `amenities.removeHostelAmenity` / `removeRoomAmenity` → single-row deletes, no dependents.
 
 No hostel delete cascade is implemented because no endpoint deletes a hostel (see Non-goals).
