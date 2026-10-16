@@ -5,12 +5,14 @@ export const errorHandler = (err, req, res, next) => {
   // Only deliberate application errors (those carrying their own statusCode)
   // may expose their message; anything else can contain internal detail or
   // secrets (e.g. Convex argument errors echo the whole args object).
-  const message = err.statusCode && err.message ? err.message : "Internal Server Error";
+  const isDeliberate = Boolean(err.statusCode && err.message);
+  const message = isDeliberate ? err.message : "Internal Server Error";
 
   res.status(statusCode).json({
     success: false,
     message,
-    ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
+    // stack begins with the message, so it is gated the same way
+    ...(isDeliberate && process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };
 

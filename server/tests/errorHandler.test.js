@@ -27,4 +27,18 @@ describe("errorHandler", () => {
     const res = run(new Error("ArgumentValidationError {secret: 'FAKE-SECRET-123'}"));
     expect(JSON.stringify(res.json.mock.calls[0][0])).not.toContain("FAKE-SECRET-123");
   });
+
+  it("omits stack and the secret from the whole body in development for non-deliberate errors", () => {
+    const prev = process.env.NODE_ENV;
+    process.env.NODE_ENV = "development";
+    try {
+      const res = run(new Error("args {secret: 'FAKE-SECRET-456'}"));
+      const body = res.json.mock.calls[0][0];
+      expect(JSON.stringify(body)).not.toContain("FAKE-SECRET-456");
+      expect(body.stack).toBeUndefined();
+    } finally {
+      if (prev === undefined) delete process.env.NODE_ENV;
+      else process.env.NODE_ENV = prev;
+    }
+  });
 });
