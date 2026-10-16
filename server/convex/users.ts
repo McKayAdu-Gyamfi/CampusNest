@@ -109,12 +109,30 @@ export const getProfileComplete = secureQuery({ id: v.string() }, async (ctx, { 
   return { profile_complete: user.profile_complete };
 });
 
+// Allow-list of patchable fields; unknown keys are silently dropped.
+const PATCHABLE_REQUIRED = ["name", "user_type", "profile_complete", "emailVerified"];
+const PATCHABLE_OPTIONAL = ["image", "student_id", "course", "payment_details", "current_room_id"];
+
 export const updateProfile = secureMutation({ id: v.string(), patch: v.any() }, async (ctx, { id, patch }) => {
   const userId = ctx.db.normalizeId("users", id);
   if (!userId) return null;
   const existing = await ctx.db.get(userId);
   if (!existing) return null;
-  await ctx.db.patch(userId, { ...patch, updatedAt: Date.now() });
+  const safe: Record<string, any> = {};
+  for (const key of PATCHABLE_REQUIRED) {
+    if (patch?.[key] !== undefined && patch[key] !== null) safe[key] = patch[key];
+  }
+  for (const key of PATCHABLE_OPTIONAL) {
+    if (patch?.[key] === undefined) continue;
+    // null means "clear the field": undefined makes Convex remove the key.
+    safe[key] = patch[key] === null ? undefined : patch[key];
+  }
+  if (typeof safe.current_room_id === "string") {
+    const roomId = ctx.db.normalizeId("rooms", safe.current_room_id);
+    if (!roomId) throw new Error("Room not found");
+    safe.current_room_id = roomId;
+  }
+  await ctx.db.patch(userId, { ...safe, updatedAt: Date.now() });
   const updated = await ctx.db.get(userId);
   return updated ? toApiRow(updated) : null;
 });

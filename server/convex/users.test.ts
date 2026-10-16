@@ -164,4 +164,52 @@ describe("users CRUD", () => {
     expect(updated!.name).toBe("Esi");
     expect(typeof updated!.createdAt).toBe("string");
   });
+
+  async function mkUser(t: any, email: string) {
+    return await t.mutation(api.users.create, {
+      data: { name: "U", email, emailVerified: false, user_type: "STUDENT", profile_complete: false },
+      secret,
+    });
+  }
+  async function mkRoom(t: any) {
+    return await t.run(async (ctx: any) => {
+      const hostelId = await ctx.db.insert("hostels", {
+        hostel_name: "H", location: "L", total_rooms: 1, available_rooms: 1,
+        status: "APPROVED", created_at: Date.now(), updated_at: Date.now(),
+      });
+      return await ctx.db.insert("rooms", {
+        room_number: "A1", room_type: "SINGLE", price_per_bed: 1, capacity: 1,
+        current_occupancy: 0, is_available: true, hostel_id: hostelId,
+        created_at: Date.now(), updated_at: Date.now(),
+      });
+    });
+  }
+
+  it("updateProfile drops unknown keys instead of throwing", async () => {
+    const t = convexTest(schema, modules);
+    const user = await mkUser(t, "drop@test.com");
+    const updated = await t.mutation(api.users.updateProfile, {
+      id: user.id, patch: { phone: "123", bogus: 1, course: "CS" }, secret,
+    });
+    expect(updated!.course).toBe("CS");
+    expect((updated as any).phone).toBeUndefined();
+  });
+
+  it("updateProfile accepts a valid current_room_id and clears it with null", async () => {
+    const t = convexTest(schema, modules);
+    const user = await mkUser(t, "room@test.com");
+    const roomId = await mkRoom(t);
+    const set = await t.mutation(api.users.updateProfile, { id: user.id, patch: { current_room_id: roomId }, secret });
+    expect(set!.current_room_id).toBe(roomId);
+    const cleared = await t.mutation(api.users.updateProfile, { id: user.id, patch: { current_room_id: null }, secret });
+    expect(cleared!.current_room_id).toBeUndefined();
+  });
+
+  it("updateProfile throws Room not found for a malformed current_room_id", async () => {
+    const t = convexTest(schema, modules);
+    const user = await mkUser(t, "badroom@test.com");
+    await expect(
+      t.mutation(api.users.updateProfile, { id: user.id, patch: { current_room_id: "nope" }, secret })
+    ).rejects.toThrow(/Room not found/);
+  });
 });

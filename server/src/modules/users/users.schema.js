@@ -9,7 +9,6 @@ export const updateUserProfileSchema = z.object({
     // move them into any room with no booking, approval, or payment.
     student_id: z.string().optional(), // School issued student ID
     name: z.string().optional(), // Common
-    phone: z.string().optional(), // Example additional fields
     payment_details: z.string().optional() // Manager specific
   })
 });
