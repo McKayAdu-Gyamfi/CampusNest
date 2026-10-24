@@ -1905,14 +1905,24 @@ export const update = secureMutation({ id: v.string(), patch: v.any() }, async (
   const room = await ctx.db.get(roomId);
   if (!room) return null;
 
-  const { hostel_id, id: _ignoredId, ...safePatch } = patch ?? {};
+  // is_available is server-derived, never client-set: updateRoomSchema
+  // accepts it from the request body, and letting it through would both
+  // store a value that contradicts occupancy and corrupt the flip
+  // detection below.
+  const { hostel_id, id: _ignoredId, is_available: _serverDerived, ...safePatch } = patch ?? {};
+
+  // Captured BEFORE the patch. Comparing against the post-patch value
+  // instead lets a caller who sends is_available fake a flip and shift
+  // the hostel's available_rooms on every request.
+  const wasAvailable = room.is_available;
+
   await ctx.db.patch(roomId, { ...safePatch, updated_at: Date.now() });
 
   const patched = await ctx.db.get(roomId);
   if (!patched) return null;
 
   const nowAvailable = patched.current_occupancy < patched.capacity;
-  if (nowAvailable !== patched.is_available) {
+  if (nowAvailable !== wasAvailable) {
     await ctx.db.patch(roomId, { is_available: nowAvailable });
     await adjustHostelCounts(ctx, patched.hostel_id, 0, nowAvailable ? 1 : -1);
   }
