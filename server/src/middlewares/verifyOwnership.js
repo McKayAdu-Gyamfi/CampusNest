@@ -1,17 +1,15 @@
 import { supabase } from "../config/db.js";
+import { cq } from "../config/convexClient.js";
+import { api } from "../../convex/_generated/api.js";
 
 export const verifyHostelOwnership = async (req, res, next) => {
   try {
     const hostelId = req.params.hostelId || req.params.id;
     const userId = req.user.id;
 
-    const { data: hostel, error } = await supabase
-      .from("HOSTEL")
-      .select("manager_id")
-      .eq("id", hostelId)
-      .single();
+    const hostel = await cq(api.hostels.getManagerId, { id: hostelId });
 
-    if (error || !hostel) {
+    if (!hostel) {
       return res.status(404).json({ success: false, message: "Hostel not found" });
     }
 

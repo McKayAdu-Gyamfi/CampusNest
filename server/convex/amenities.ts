@@ -72,13 +72,21 @@ export const replaceForHostel = secureMutation(
   }
 );
 
-export const removeHostelAmenity = secureMutation({ id: v.string() }, async (ctx, { id }) => {
-  const rowId = ctx.db.normalizeId("hostelAmenities", id);
-  if (!rowId) return { success: true };
-  const row = await ctx.db.get(rowId);
-  if (row) await ctx.db.delete(rowId);
-  return { success: true };
-});
+// hostelId is the hostel from the URL the caller was authorized against. A
+// row belonging to any other hostel is left alone and the response is the
+// same no-op shape, so the endpoint leaks nothing about other hostels' rows.
+export const removeHostelAmenity = secureMutation(
+  { id: v.string(), hostelId: v.string() },
+  async (ctx, { id, hostelId }) => {
+    const rowId = ctx.db.normalizeId("hostelAmenities", id);
+    if (!rowId) return { success: true };
+    const expectedHostelId = ctx.db.normalizeId("hostels", hostelId);
+    if (!expectedHostelId) return { success: true };
+    const row = await ctx.db.get(rowId);
+    if (row && row.hostel_id === expectedHostelId) await ctx.db.delete(rowId);
+    return { success: true };
+  }
+);
 
 export const addForRoom = secureMutation(
   { roomId: v.string(), names: amenityNames },

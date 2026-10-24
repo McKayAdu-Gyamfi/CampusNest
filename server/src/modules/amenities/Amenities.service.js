@@ -41,9 +41,9 @@ export const addHostelAmenities = async (hostelId, amenities) => {
   }
 };
 
-export const removeHostelAmenity = async (id) => {
+export const removeHostelAmenity = async (id, hostelId) => {
   try {
-    return await cm(api.amenities.removeHostelAmenity, { id });
+    return await cm(api.amenities.removeHostelAmenity, { id, hostelId });
   } catch (error) {
     throw wrapError(error);
   }

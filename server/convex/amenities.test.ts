@@ -121,7 +121,7 @@ describe("amenities", () => {
     const t = convexTest(schema, modules);
     const { hostelId } = await seedHostelAndRoom(t);
     const [row] = await t.mutation(api.amenities.addForHostel, { hostelId, names: ["WIFI"], secret });
-    const result = await t.mutation(api.amenities.removeHostelAmenity, { id: row.id, secret });
+    const result = await t.mutation(api.amenities.removeHostelAmenity, { id: row.id, hostelId, secret });
     expect(result).toEqual({ success: true });
     expect(await allHostelAmenities(t)).toHaveLength(0);
   });
@@ -130,17 +130,17 @@ describe("amenities", () => {
     const t = convexTest(schema, modules);
     const { hostelId } = await seedHostelAndRoom(t);
     await t.mutation(api.amenities.addForHostel, { hostelId, names: ["WIFI"], secret });
-    const result = await t.mutation(api.amenities.removeHostelAmenity, { id: "bogus", secret });
+    const result = await t.mutation(api.amenities.removeHostelAmenity, { id: "bogus", hostelId, secret });
     expect(result).toEqual({ success: true });
     expect(await allHostelAmenities(t)).toHaveLength(1);
   });
 
   it("removeHostelAmenity with a well-formed id from another table is a no-op", async () => {
     const t = convexTest(schema, modules);
-    const { roomId } = await seedHostelAndRoom(t);
+    const { hostelId, roomId } = await seedHostelAndRoom(t);
     await t.mutation(api.amenities.addForRoom, { roomId, names: ["LAUNDRY"], secret });
     const [roomRow] = await allRoomAmenities(t);
-    const result = await t.mutation(api.amenities.removeHostelAmenity, { id: roomRow._id, secret });
+    const result = await t.mutation(api.amenities.removeHostelAmenity, { id: roomRow._id, hostelId, secret });
     expect(result).toEqual({ success: true });
     expect(await allRoomAmenities(t)).toHaveLength(1);
   });
@@ -149,10 +149,25 @@ describe("amenities", () => {
     const t = convexTest(schema, modules);
     const { hostelId } = await seedHostelAndRoom(t);
     const [row] = await t.mutation(api.amenities.addForHostel, { hostelId, names: ["WIFI"], secret });
-    await t.mutation(api.amenities.removeHostelAmenity, { id: row.id, secret });
-    const result = await t.mutation(api.amenities.removeHostelAmenity, { id: row.id, secret });
+    await t.mutation(api.amenities.removeHostelAmenity, { id: row.id, hostelId, secret });
+    const result = await t.mutation(api.amenities.removeHostelAmenity, { id: row.id, hostelId, secret });
     expect(result).toEqual({ success: true });
     expect(await allHostelAmenities(t)).toHaveLength(0);
+  });
+
+  it("removeHostelAmenity will not delete a row belonging to a different hostel", async () => {
+    const t = convexTest(schema, modules);
+    const { hostelId: hostelA } = await seedHostelAndRoom(t);
+    const hostelB = await seedSecondHostel(t);
+    await t.mutation(api.amenities.addForHostel, { hostelId: hostelA, names: ["WIFI"], secret });
+    const [rowB] = await t.mutation(api.amenities.addForHostel, { hostelId: hostelB, names: ["GYM"], secret });
+    const result = await t.mutation(api.amenities.removeHostelAmenity, {
+      id: rowB.id, hostelId: hostelA, secret,
+    });
+    expect(result).toEqual({ success: true });
+    const all = await allHostelAmenities(t);
+    expect(all).toHaveLength(2);
+    expect(all.some((r: any) => r._id === rowB.id)).toBe(true);
   });
 
   it("room amenities behave the same way, keyed by room_id", async () => {
