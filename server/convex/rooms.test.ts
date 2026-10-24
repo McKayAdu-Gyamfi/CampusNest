@@ -191,8 +191,59 @@ describe("rooms", () => {
     const scene = await t.mutation(api.rooms.addTourScene, {
       roomId: room.id, scene_name: "S", scene_config_url: "https://example.com/t.json", secret,
     });
-    await t.mutation(api.rooms.removeTourScene, { id: scene.id, secret });
+    await t.mutation(api.rooms.removeTourScene, { id: scene.id, roomId: room.id, secret });
     const scenes = await t.run(async (ctx) => await ctx.db.query("roomTourScenes").collect());
     expect(scenes).toHaveLength(0);
+  });
+
+  it("update ignores a caller-supplied is_available and does not drift available_rooms", async () => {
+    const t = convexTest(schema, modules);
+    const hostel = await makeHostel(t);
+    const room = await makeRoom(t, hostel.id);
+    const r = await t.mutation(api.rooms.update, { id: room.id, patch: { is_available: false }, secret });
+    expect(r!.is_available).toBe(true);
+    const h = await t.query(api.hostels.getByIdWithRelations, { id: hostel.id, secret });
+    expect(h!.available_rooms).toBe(1);
+
+    await t.mutation(api.rooms.update, { id: room.id, patch: { current_occupancy: 2 }, secret });
+    const full = await t.mutation(api.rooms.update, { id: room.id, patch: { is_available: true }, secret });
+    expect(full!.is_available).toBe(false);
+    const h2 = await t.query(api.hostels.getByIdWithRelations, { id: hostel.id, secret });
+    expect(h2!.available_rooms).toBe(0);
+  });
+
+  it("a non-flipping update leaves available_rooms unchanged", async () => {
+    const t = convexTest(schema, modules);
+    const hostel = await makeHostel(t);
+    const room = await makeRoom(t, hostel.id);
+    await t.mutation(api.rooms.update, { id: room.id, patch: { room_number: "Z9" }, secret });
+    const h = await t.query(api.hostels.getByIdWithRelations, { id: hostel.id, secret });
+    expect(h!.available_rooms).toBe(1);
+    expect(h!.total_rooms).toBe(1);
+  });
+
+  it("removeTourScene ignores a scene that belongs to a different room", async () => {
+    const t = convexTest(schema, modules);
+    const hostel = await makeHostel(t);
+    const a = await makeRoom(t, hostel.id, { room_number: "A1" });
+    const b = await makeRoom(t, hostel.id, { room_number: "B1" });
+    await t.mutation(api.rooms.addTourScene, { roomId: a.id, scene_name: "A", scene_config_url: "https://example.com/a.json", secret });
+    const sceneB = await t.mutation(api.rooms.addTourScene, { roomId: b.id, scene_name: "B", scene_config_url: "https://example.com/b.json", secret });
+    const res = await t.mutation(api.rooms.removeTourScene, { id: sceneB.id, roomId: a.id, secret });
+    expect(res).toEqual({ success: true });
+    const scenes = await t.run(async (ctx) => await ctx.db.query("roomTourScenes").collect());
+    expect(scenes).toHaveLength(2);
+  });
+
+  it("remove of an already-unavailable room decrements total_rooms but not available_rooms", async () => {
+    const t = convexTest(schema, modules);
+    const hostel = await makeHostel(t);
+    const full = await makeRoom(t, hostel.id, { room_number: "F1" });
+    await makeRoom(t, hostel.id, { room_number: "F2" });
+    await t.mutation(api.rooms.update, { id: full.id, patch: { current_occupancy: 2 }, secret });
+    await t.mutation(api.rooms.remove, { id: full.id, secret });
+    const h = await t.query(api.hostels.getByIdWithRelations, { id: hostel.id, secret });
+    expect(h!.total_rooms).toBe(1);
+    expect(h!.available_rooms).toBe(1);
   });
 });

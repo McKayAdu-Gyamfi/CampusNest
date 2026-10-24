@@ -72,9 +72,9 @@ export const deleteRoom = async (req, res, next) => {
   }
 };
 
-// Availability is recomputed inside api.rooms.update and
-// api.bookings.updateStatus, in the same transaction as the write that
-// changes occupancy. Kept as a no-op so existing importers keep working.
+// Availability is recomputed inside api.rooms.update, in the same
+// transaction as the write that changes occupancy. Kept as a no-op so
+// existing importers keep working.
 export const syncRoomAvailability = async () => {};
 
 // PATCH /api/rooms/:id
@@ -158,9 +158,9 @@ export const uploadRoomImages = async (req, res, next) => {
 // DELETE /api/rooms/:id/tours/:sceneId
 export const deleteRoomTourScene = async (req, res, next) => {
   try {
-    const { sceneId } = req.params;
+    const { id, sceneId } = req.params;
 
-    await cm(api.rooms.removeTourScene, { id: req.params.sceneId });
+    await cm(api.rooms.removeTourScene, { id: sceneId, roomId: id });
 
     res.json({ success: true, message: "Tour scene deleted successfully" });
   } catch (err) {

@@ -24,7 +24,6 @@ export const updateRoomSchema = z.object({
     price_per_bed: z.number().positive().optional(),
     capacity: z.number().int().positive().optional(),
     current_occupancy: z.number().int().min(0).optional(),
-    is_available: z.boolean().optional(),
     length: z.number().positive().optional(),
     width: z.number().positive().optional(),
     height: z.number().positive().optional(),

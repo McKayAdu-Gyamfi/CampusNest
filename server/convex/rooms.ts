@@ -134,14 +134,15 @@ export const update = secureMutation({ id: v.string(), patch: v.any() }, async (
   const room = await ctx.db.get(roomId);
   if (!room) return null;
 
-  const { hostel_id, id: _ignoredId, ...safePatch } = patch ?? {};
+  const wasAvailable = room.is_available;
+  const { hostel_id, id: _ignoredId, is_available: _serverDerived, ...safePatch } = patch ?? {};
   await ctx.db.patch(roomId, { ...safePatch, updated_at: Date.now() });
 
   const patched = await ctx.db.get(roomId);
   if (!patched) return null;
 
   const nowAvailable = patched.current_occupancy < patched.capacity;
-  if (nowAvailable !== patched.is_available) {
+  if (nowAvailable !== wasAvailable) {
     await ctx.db.patch(roomId, { is_available: nowAvailable });
     await adjustHostelCounts(ctx, patched.hostel_id, 0, nowAvailable ? 1 : -1);
   }
@@ -207,10 +208,17 @@ export const addTourScene = secureMutation(
   }
 );
 
-export const removeTourScene = secureMutation({ id: v.string() }, async (ctx, { id }) => {
-  const sceneId = ctx.db.normalizeId("roomTourScenes", id);
-  if (!sceneId) return { success: true };
-  const scene = await ctx.db.get(sceneId);
-  if (scene) await ctx.db.delete(sceneId);
-  return { success: true };
-});
+// roomId is the room from the URL the caller was authorized against. A scene
+// belonging to any other room is left alone with the same no-op response.
+export const removeTourScene = secureMutation(
+  { id: v.string(), roomId: v.string() },
+  async (ctx, { id, roomId }) => {
+    const sceneId = ctx.db.normalizeId("roomTourScenes", id);
+    if (!sceneId) return { success: true };
+    const expectedRoomId = ctx.db.normalizeId("rooms", roomId);
+    if (!expectedRoomId) return { success: true };
+    const scene = await ctx.db.get(sceneId);
+    if (scene && scene.room_id === expectedRoomId) await ctx.db.delete(sceneId);
+    return { success: true };
+  }
+);
