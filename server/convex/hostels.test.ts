@@ -145,6 +145,11 @@ describe("hostels", () => {
     expect(await t.query(api.hostels.getManagerId, { id: "bogus", secret })).toBeNull();
   });
 
+  // Accepting `status` here is deliberate: the admin-only PATCH /:id/status
+  // endpoint routes through this same mutation. The manager-facing PATCH /:id
+  // is kept from reaching it by the controller's destructure of
+  // status/manager_id, which tests/hostels.controller.test.js pins. Do not
+  // simplify the controller on the strength of this test.
   it("update patches given fields and addImages returns the created rows", async () => {
     const t = convexTest(schema, modules);
     const hostel = await t.mutation(api.hostels.create, {
