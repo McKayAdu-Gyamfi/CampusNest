@@ -1,28 +1,21 @@
-import { supabase } from "../../config/db.js";
-import { syncRoomAvailability } from "../rooms/rooms.controller.js";
+import { cq, cm } from "../../config/convexClient.js";
+import { api } from "../../../convex/_generated/api.js";
 
 // GET /api/bookings?student_id=123
 export const getBookings = async (req, res, next) => {
   try {
     const { student_id } = req.query;
 
-    let query = supabase.from("BOOKING").select(`
-      *,
-      ROOM (room_number, hostel_id, HOSTEL (hostel_name)),
-      USERS:student_id (email, profile_complete)
-    `);
-
+    const args = {};
     if (req.user.user_type === "STUDENT") {
       // Students can only see their own bookings
-      query = query.eq("student_id", req.user.id);
+      args.studentId = req.user.id;
     } else if (student_id) {
       // Managers/Admins can filter by student_id
-      query = query.eq("student_id", student_id);
+      args.studentId = String(student_id);
     }
 
-    const { data, error } = await query;
-
-    if (error) throw error;
+    const data = await cq(api.bookings.list, args);
     res.json({ success: true, data });
   } catch (err) {
     next(err);
@@ -32,19 +25,9 @@ export const getBookings = async (req, res, next) => {
 // GET /api/bookings/:id
 export const getBookingById = async (req, res, next) => {
   try {
-    const { id } = req.params;
+    const data = await cq(api.bookings.getByIdWithRelations, { id: req.params.id });
 
-    const { data, error } = await supabase
-      .from("BOOKING")
-      .select(`
-        *,
-        ROOM (room_number, hostel_id, HOSTEL (hostel_name, manager_id)),
-        USERS:student_id (email, profile_complete)
-      `)
-      .eq("id", id)
-      .single();
-
-    if (error || !data) {
+    if (!data) {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
@@ -68,14 +51,9 @@ export const createBooking = async (req, res, next) => {
   try {
     const { check_in_date, check_out_date, room_id, student_id } = req.body;
 
-    // Check room availability
-    const { data: room, error: roomError } = await supabase
-      .from("ROOM")
-      .select("is_available")
-      .eq("id", room_id)
-      .single();
+    const room = await cq(api.rooms.getBasics, { id: room_id });
 
-    if (roomError || !room) {
+    if (!room) {
       return res.status(404).json({ success: false, message: "Room not found" });
     }
 
@@ -87,23 +65,10 @@ export const createBooking = async (req, res, next) => {
     // Otherwise allow Manager/Admin to specify student_id
     const final_student_id = req.user.user_type === "STUDENT" ? req.user.id : student_id;
 
-    const payload = {
-      check_in_date,
-      check_out_date,
-      room_id,
-      student_id: final_student_id,
-      status: "PENDING",
-      created_at: new Date(),
-      updated_at: new Date()
-    };
+    const data = await cm(api.bookings.create, {
+      data: { check_in_date, check_out_date, room_id, student_id: final_student_id },
+    });
 
-    const { data, error } = await supabase
-      .from("BOOKING")
-      .insert([payload])
-      .select()
-      .single();
-
-    if (error) throw error;
     res.status(201).json({ success: true, data });
   } catch (err) {
     next(err);
@@ -116,25 +81,9 @@ export const updateBookingStatus = async (req, res, next) => {
     const { id } = req.params;
     const { status } = req.body;
 
-    // Fetch booking details including room and hostel to verify ownership
-    const { data: booking, error: fetchError } = await supabase
-      .from("BOOKING")
-      .select(`
-        *,
-        ROOM (
-          id,
-          capacity,
-          current_occupancy,
-          hostel_id,
-          HOSTEL (
-            manager_id
-          )
-        )
-      `)
-      .eq("id", id)
-      .single();
+    const booking = await cq(api.bookings.getByIdWithRelations, { id });
 
-    if (fetchError || !booking) {
+    if (!booking) {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
@@ -147,73 +96,32 @@ export const updateBookingStatus = async (req, res, next) => {
         return res.status(403).json({ success: false, message: "Students can only cancel their bookings" });
       }
     } else if (req.user.user_type === "HOSTEL_MANAGER") {
-      const managerId = booking.ROOM?.HOSTEL?.manager_id;
-      if (managerId !== req.user.id) {
+      if (booking.ROOM?.HOSTEL?.manager_id !== req.user.id) {
         return res.status(403).json({ success: false, message: "Forbidden: You do not manage the hostel for this booking" });
       }
     }
 
-    // Handle Occupancy Changes
-    const previousStatus = booking.status;
-    const newStatus = status;
-    const roomId = booking.room_id;
-    let occupancyChange = 0;
-
-    // From non-confirmed to CONFIRMED
-    if (newStatus === "CONFIRMED" && previousStatus !== "CONFIRMED") {
-      occupancyChange = 1;
-    }
-    // From CONFIRMED to CANCELLED/CHECKED_OUT
-    else if (previousStatus === "CONFIRMED" && (newStatus === "CANCELLED" || newStatus === "CHECKED_OUT")) {
-      occupancyChange = -1;
-    }
-
-    // Reject confirming into a room that's already at capacity — without this,
-    // a manager confirming multiple PENDING bookings for the same room can
-    // push current_occupancy above capacity with nothing to stop it.
-    if (occupancyChange === 1 && booking.ROOM) {
-      const nextOccupancy = (booking.ROOM.current_occupancy || 0) + 1;
-      if (nextOccupancy > booking.ROOM.capacity) {
+    // The status change, the occupancy delta, the room's availability, the
+    // hostel's available_rooms and the student's current_room_id all move
+    // together inside this one mutation.
+    let data;
+    try {
+      data = await cm(api.bookings.updateStatus, { id, status });
+    } catch (err) {
+      // err.data.code, not err.message — Convex redacts a plain Error's
+      // message on a prod deployment, so matching on text would pass in
+      // dev and silently fall through to a generic 500 in production.
+      if (err.data?.code === "ROOM_AT_CAPACITY") {
         return res.status(409).json({ success: false, message: "Room is already at full capacity" });
       }
+      throw err;
     }
 
-    const { data: updatedBooking, error: updateError } = await supabase
-      .from("BOOKING")
-      .update({ status, updated_at: new Date() })
-      .eq("id", id)
-      .select()
-      .single();
-
-    if (updateError) throw updateError;
-
-    if (occupancyChange !== 0 && booking.ROOM) {
-      const newOccupancy = Math.max(0, (booking.ROOM.current_occupancy || 0) + occupancyChange);
-
-      await supabase
-        .from("ROOM")
-        .update({ current_occupancy: newOccupancy })
-        .eq("id", roomId);
-
-      await syncRoomAvailability(roomId);
-
-      // Keep the student's current_room_id in step with their actual
-      // confirmed booking — this is the only place that field is ever set.
-      if (occupancyChange === 1) {
-        await supabase
-          .from("user")
-          .update({ current_room_id: roomId })
-          .eq("id", booking.student_id);
-      } else if (occupancyChange === -1) {
-        await supabase
-          .from("user")
-          .update({ current_room_id: null })
-          .eq("id", booking.student_id)
-          .eq("current_room_id", roomId);
-      }
+    if (!data) {
+      return res.status(404).json({ success: false, message: "Booking not found" });
     }
 
-    res.json({ success: true, data: updatedBooking });
+    res.json({ success: true, data });
   } catch (err) {
     next(err);
   }

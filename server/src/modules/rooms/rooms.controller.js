@@ -72,11 +72,6 @@ export const deleteRoom = async (req, res, next) => {
   }
 };
 
-// Availability is recomputed inside api.rooms.update, in the same
-// transaction as the write that changes occupancy. Kept as a no-op so
-// existing importers keep working.
-export const syncRoomAvailability = async () => {};
-
 // PATCH /api/rooms/:id
 export const updateRoom = async (req, res, next) => {
   try {
