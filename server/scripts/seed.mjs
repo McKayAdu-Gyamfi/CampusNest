@@ -12,27 +12,62 @@ const MANAGER = { email: "manager@campusnest.test", password: "DemoManager123!",
 const STUDENT = { email: "student@campusnest.test", password: "DemoStudent123!", name: "Kwame Asante" };
 
 async function signUp({ email, password, name }) {
-  const response = await auth.api.signUpEmail({ body: { email, password, name } });
-  if (response.error) {
-    throw new Error(`Could not create ${email}: ${response.error.message}`);
+  try {
+    const response = await auth.api.signUpEmail({ body: { email, password, name } });
+    return response.user;
+  } catch (err) {
+    throw new Error(`Could not create ${email}: ${err?.message ?? err}`);
   }
-  return response.user;
+}
+
+async function patchProfile(email, id, patch) {
+  const result = await cm(api.users.updateProfile, { id, patch });
+  if (result === null) {
+    throw new Error(`Profile patch for ${email} did not apply (user id ${id} not found); the account may be half-seeded`);
+  }
+}
+
+// The accounts use publicly-known passwords, so refuse anything but a dev
+// deployment. Fails closed when CONVEX_DEPLOYMENT is unset.
+function assertDevDeployment() {
+  const deployment = process.env.CONVEX_DEPLOYMENT;
+  if (deployment?.startsWith("dev:")) return;
+  if (process.env.SEED_ALLOW_NON_DEV === "1") {
+    console.warn("!!! WARNING: SEED_ALLOW_NON_DEV=1 set; seeding a NON-DEV deployment with publicly-known passwords !!!");
+    return;
+  }
+  const kind = deployment ? `"${deployment.split(":")[0]}"` : "unknown (CONVEX_DEPLOYMENT is unset)";
+  console.error(
+    `Refusing to seed: the deployment kind is ${kind}, not dev.\n` +
+      "This script creates accounts (including a HOSTEL_MANAGER) with passwords published in the repo, so it is dev-only.\n" +
+      "Set SEED_ALLOW_NON_DEV=1 to override deliberately.",
+  );
+  process.exit(1);
 }
 
 async function main() {
+  assertDevDeployment();
+
+  for (const { email } of [MANAGER, STUDENT]) {
+    const existing = await cq(api.users.findOne, { where: [{ field: "email", value: email }] });
+    if (existing) {
+      console.log(`Seed data already present (found ${email}). Nothing was written.`);
+      console.log("To re-seed, clear the deployment from the Convex dashboard first.");
+      process.exit(0);
+    }
+  }
+
   console.log("Seeding Convex deployment...");
 
   const manager = await signUp(MANAGER);
-  await cm(api.users.updateProfile, {
-    id: manager.id,
-    patch: { user_type: "HOSTEL_MANAGER", profile_complete: true, payment_details: "Demo Bank 0123456789" },
+  await patchProfile(MANAGER.email, manager.id, {
+    user_type: "HOSTEL_MANAGER", profile_complete: true, payment_details: "Demo Bank 0123456789",
   });
   console.log(`  manager: ${MANAGER.email} / ${MANAGER.password}`);
 
   const student = await signUp(STUDENT);
-  await cm(api.users.updateProfile, {
-    id: student.id,
-    patch: { user_type: "STUDENT", profile_complete: true, student_id: "UG-2026-0042", course: "Computer Science" },
+  await patchProfile(STUDENT.email, student.id, {
+    user_type: "STUDENT", profile_complete: true, student_id: "UG-2026-0042", course: "Computer Science",
   });
   console.log(`  student: ${STUDENT.email} / ${STUDENT.password}`);
 
