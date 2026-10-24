@@ -21,7 +21,17 @@ const wrapError = (error) => {
     case "ROOM_NOT_FOUND":
       return new AmenityServiceError("Room not found", 404);
     default:
-      return new AmenityServiceError(error.message, 400);
+      // Deliberately NOT relabelled as a client error. An unrecognised
+      // failure here is an infrastructure problem (e.g. deployment/version
+      // skew making Convex reject an argument it doesn't know about), and
+      // such an ArgumentValidationError echoes the whole args object —
+      // including the adapter secret — into error.message. Attaching a
+      // statusCode would make errorHandler treat the message as
+      // deliberate and return it verbatim in the response body. Returned
+      // bare, it has no statusCode, so it falls through to the generic
+      // 500 path which logs the full detail server-side and tells the
+      // caller nothing.
+      return error;
   }
 };
 

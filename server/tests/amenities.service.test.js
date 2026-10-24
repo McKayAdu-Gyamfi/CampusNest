@@ -7,6 +7,7 @@ const cmMock = vi.hoisted(() => vi.fn());
 vi.mock('../src/config/convexClient.js', () => ({ cm: cmMock, cq: vi.fn(), ca: vi.fn() }));
 
 import * as service from '../src/modules/amenities/Amenities.service.js';
+import { errorHandler } from '../src/middlewares/errorHandler.js';
 
 beforeEach(() => {
   cmMock.mockReset();
@@ -36,11 +37,39 @@ describe('Amenities.service error mapping', () => {
     expect(err.message).toBe('Room not found');
   });
 
-  it('falls back to a 400 for an unrecognised error', async () => {
-    cmMock.mockRejectedValue(new Error('boom'));
-    const err = await service.removeRoomAmenity('x').catch((e) => e);
-    expect(err.statusCode).toBe(400);
-    expect(err.message).toBe('boom');
+  it('does not relabel an unrecognised error as a client error', async () => {
+    const original = new Error('boom');
+    cmMock.mockRejectedValue(original);
+    const err = await service.removeRoomAmenity('x', 'r1').catch((e) => e);
+    expect(err).toBe(original);
+    // No statusCode means errorHandler treats it as non-deliberate and
+    // hides the message behind a generic 500.
+    expect(err.statusCode).toBeUndefined();
+  });
+
+  it('keeps a secret-bearing unrecognised error out of the response body', async () => {
+    // Shape of a Convex extra-field ArgumentValidationError: it echoes the
+    // whole args object, adapter secret included. If wrapError attached a
+    // statusCode, errorHandler would return this verbatim to the caller.
+    const FAKE_SECRET = 'FAKE-ADAPTER-SECRET-789';
+    cmMock.mockRejectedValue(
+      new Error(
+        'ArgumentValidationError: Object contains extra field `roomId` that is not in the validator. ' +
+          `Object: {id: "x", roomId: "r1", secret: "${FAKE_SECRET}"}`,
+      ),
+    );
+
+    const err = await service.removeRoomAmenity('x', 'r1').catch((e) => e);
+    expect(err.statusCode).toBeUndefined();
+
+    const res = { status: vi.fn().mockReturnThis(), json: vi.fn().mockReturnThis() };
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    errorHandler(err, {}, res, () => {});
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    const body = res.json.mock.calls[0][0];
+    expect(JSON.stringify(body)).not.toContain(FAKE_SECRET);
+    expect(body.message).toBe('Internal Server Error');
   });
 
   it('forwards successful results unchanged', async () => {
