@@ -81,7 +81,8 @@ export const updateStatus = secureMutation(
     const previous = booking.status;
     let occupancyChange = 0;
     if (status === "CONFIRMED" && previous !== "CONFIRMED") occupancyChange = 1;
-    else if (previous === "CONFIRMED" && (status === "CANCELLED" || status === "CHECKED_OUT")) {
+    else if (previous === "CONFIRMED" && status !== "CONFIRMED") {
+      // Occupancy counts exactly the CONFIRMED bookings, so any exit releases the bed.
       occupancyChange = -1;
     }
 

@@ -135,7 +135,7 @@ describe("bookings", () => {
 
   it("refuses to confirm into a full room and never exceeds capacity (Review Focus #4)", async () => {
     const t = convexTest(schema, modules);
-    const { student, room } = await scenario(t, { capacity: 1 });
+    const { student, room, hostel } = await scenario(t, { capacity: 1 });
     const first = await book(t, student.id, room.id);
     const second = await book(t, student.id, room.id);
 
@@ -146,6 +146,14 @@ describe("bookings", () => {
 
     const basics = await t.query(api.rooms.getBasics, { id: room.id, secret });
     expect(basics!.current_occupancy).toBe(1);
+
+    // Nothing was partially applied by the rejected call.
+    const after = await t.query(api.bookings.getByIdWithRelations, { id: second.id, secret });
+    expect(after!.status).toBe("PENDING");
+    const h = await t.query(api.hostels.getByIdWithRelations, { id: hostel.id, secret });
+    expect(h!.available_rooms).toBe(0);
+    const me = await t.query(api.users.getMeWithRoom, { id: student.id, secret });
+    expect(me!.ROOM.room_number).toBe("A1");
   });
 
   it("confirming twice does not double-count occupancy", async () => {
@@ -188,5 +196,68 @@ describe("bookings", () => {
     expect(await t.query(api.bookings.existsForStudentInRooms, {
       studentId: "bogus", roomIds: [room.id], secret,
     })).toBe(false);
+  });
+
+  const occ = async (t: any, roomId: string) =>
+    (await t.query(api.rooms.getBasics, { id: roomId, secret }))!.current_occupancy;
+  const setStatus = (t: any, id: string, status: any) =>
+    t.mutation(api.bookings.updateStatus, { id, status, secret });
+
+  it("releasing a booking on a full room restores availability (+1 on the hostel)", async () => {
+    const t = convexTest(schema, modules);
+    const { student, room, hostel } = await scenario(t, { capacity: 1 });
+    const b = await book(t, student.id, room.id);
+    await setStatus(t, b.id, "CONFIRMED");
+    expect((await t.query(api.hostels.getByIdWithRelations, { id: hostel.id, secret }))!.available_rooms).toBe(0);
+    await setStatus(t, b.id, "CANCELLED");
+    expect((await t.query(api.rooms.getBasics, { id: room.id, secret }))!.is_available).toBe(true);
+    expect((await t.query(api.hostels.getByIdWithRelations, { id: hostel.id, secret }))!.available_rooms).toBe(1);
+  });
+
+  it("CONFIRMED -> PENDING releases the bed, and re-confirming counts exactly once", async () => {
+    const t = convexTest(schema, modules);
+    const { student, room } = await scenario(t);
+    const b = await book(t, student.id, room.id);
+    await setStatus(t, b.id, "CONFIRMED");
+    await setStatus(t, b.id, "PENDING");
+    expect(await occ(t, room.id)).toBe(0);
+    expect((await t.query(api.users.getMeWithRoom, { id: student.id, secret }))!.ROOM).toBeNull();
+    await setStatus(t, b.id, "CONFIRMED");
+    expect(await occ(t, room.id)).toBe(1);
+  });
+
+  it("CONFIRMED -> CHECKED_OUT decrements occupancy", async () => {
+    const t = convexTest(schema, modules);
+    const { student, room } = await scenario(t);
+    const b = await book(t, student.id, room.id);
+    await setStatus(t, b.id, "CONFIRMED");
+    await setStatus(t, b.id, "CHECKED_OUT");
+    expect(await occ(t, room.id)).toBe(0);
+  });
+
+  it("non-confirmed exits do not decrement occupancy", async () => {
+    const t = convexTest(schema, modules);
+    const { student, room } = await scenario(t);
+    const kept = await book(t, student.id, room.id);
+    await setStatus(t, kept.id, "CONFIRMED");
+    const other = await book(t, student.id, room.id);
+    await setStatus(t, other.id, "CANCELLED");
+    expect(await occ(t, room.id)).toBe(1);
+    await setStatus(t, other.id, "CANCELLED");
+    expect(await occ(t, room.id)).toBe(1);
+  });
+
+  it("releasing a booking does not clear current_room_id pointing at another room", async () => {
+    const t = convexTest(schema, modules);
+    const { student, room, hostel } = await scenario(t);
+    const roomB = await t.mutation(api.rooms.create, {
+      data: { room_number: "B1", room_type: "DOUBLE", price_per_bed: 400, capacity: 2, hostel_id: hostel.id },
+      secret,
+    });
+    const b = await book(t, student.id, room.id);
+    await setStatus(t, b.id, "CONFIRMED");
+    await t.mutation(api.users.updateProfile, { id: student.id, patch: { current_room_id: roomB.id }, secret });
+    await setStatus(t, b.id, "CANCELLED");
+    expect((await t.query(api.users.getMeWithRoom, { id: student.id, secret }))!.ROOM.room_number).toBe("B1");
   });
 });
