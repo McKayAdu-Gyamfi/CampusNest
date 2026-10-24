@@ -2360,9 +2360,12 @@ describe("bookings", () => {
     const second = await book(t, student.id, room.id);
 
     await t.mutation(api.bookings.updateStatus, { id: first.id, status: "CONFIRMED", secret });
+    // Asserts the structured code, not the message: a ConvexError carries
+    // its data to the client while a plain Error's message is redacted in
+    // production, so a /full capacity/i match could never succeed here.
     await expect(
       t.mutation(api.bookings.updateStatus, { id: second.id, status: "CONFIRMED", secret })
-    ).rejects.toThrow(/full capacity/i);
+    ).rejects.toMatchObject({ data: { code: "ROOM_AT_CAPACITY" } });
 
     const basics = await t.query(api.rooms.getBasics, { id: room.id, secret });
     expect(basics!.current_occupancy).toBe(1);
