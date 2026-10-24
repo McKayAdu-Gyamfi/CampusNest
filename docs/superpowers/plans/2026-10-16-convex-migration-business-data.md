@@ -19,6 +19,7 @@
 - Business field names stay snake_case exactly as Postgres had them (`hostel_name`, `price_per_bed`, `current_occupancy`).
 - `created_at`, `updated_at`, `createdAt`, `updatedAt`, `check_in_date`, `check_out_date` are stored as epoch-ms numbers and returned as ISO 8601 strings.
 - Controllers keep their existing HTTP status codes and JSON envelope (`{ success, data }` / `{ success, message }`). A Convex query returning `null` maps to the same 404 the old `PGRST116` branch produced.
+- **Any error the Express layer needs to tell apart must be a `ConvexError` carrying a structured code, never a plain `Error` matched by message text.** Convex's docs are explicit that for a non-`ConvexError` throw, "prod deployments will not reveal any more information about it to the client" — the message is redacted, so a `err.message.includes(...)` check passes in dev and silently fails in production, degrading a deliberate 409 into a generic 400. Throw `new ConvexError({ code: "SCREAMING_SNAKE_CODE" })` from the Convex function and branch on `err.data?.code` in Express. The codes this plan uses: `DUPLICATE_AMENITY`, `ROOM_AT_CAPACITY`, `INVALID_RATING`, `HOSTEL_NOT_FOUND`, `ROOM_NOT_FOUND`, `STUDENT_NOT_FOUND`.
 - Tests run from `server/`: `npx vitest run`. The full suite must stay green at every commit.
 - Commit messages end with `Co-Authored-By: Claude Opus 5 <noreply@anthropic.com>`. Stage only the files each task names — never `git add -A`.
 - `temp-pano-api` is untouched; it keeps writing to Supabase Storage, and `roomTourScenes.scene_config_url` keeps holding Supabase URLs.
@@ -72,7 +73,7 @@ describe("toApiRow", () => {
     } as any);
     for (const f of ["created_at", "updated_at", "check_in_date", "check_out_date", "createdAt", "updatedAt"]) {
       expect(typeof row[f]).toBe("string");
-      expect(row[f]).toBe("2026-10-16T09:50:00.000Z");
+      expect(row[f]).toBe("2025-10-16T09:50:00.000Z");
       expect(Number.isNaN(Date.parse(row[f]))).toBe(false);
     }
   });
@@ -2410,7 +2411,7 @@ Expected: FAIL — cannot resolve `api.bookings`.
 
 ```ts
 // server/convex/bookings.ts
-import { v } from "convex/values";
+import { v, ConvexError } from "convex/values";
 import { toApiRow } from "./lib/toApiRow";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
 
@@ -2500,8 +2501,12 @@ export const updateStatus = secureMutation(
 
     // Without this, a manager confirming several PENDING bookings for the
     // same room pushes current_occupancy past capacity with nothing to stop it.
+    //
+    // ConvexError, not Error: the controller maps this to a 409, and Convex
+    // redacts a plain Error's message on a prod deployment, which would
+    // silently turn that 409 into a generic 400.
     if (occupancyChange === 1 && room && room.current_occupancy + 1 > room.capacity) {
-      throw new Error("Room is already at full capacity");
+      throw new ConvexError({ code: "ROOM_AT_CAPACITY" });
     }
 
     const now = Date.now();
@@ -2683,7 +2688,10 @@ export const updateBookingStatus = async (req, res, next) => {
     try {
       data = await cm(api.bookings.updateStatus, { id, status });
     } catch (err) {
-      if (err.message && err.message.includes("full capacity")) {
+      // err.data.code, not err.message — Convex redacts a plain Error's
+      // message on a prod deployment, so matching on text would pass in
+      // dev and silently fall through to a generic 500 in production.
+      if (err.data?.code === "ROOM_AT_CAPACITY") {
         return res.status(409).json({ success: false, message: "Room is already at full capacity" });
       }
       throw err;
