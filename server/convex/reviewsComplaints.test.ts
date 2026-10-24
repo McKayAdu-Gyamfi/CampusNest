@@ -68,7 +68,7 @@ describe("reviews", () => {
 });
 
 describe("complaints", () => {
-  it("create stores a complaint with OPEN status and the hostel's manager", async () => {
+  it("create persists the supplied hostel_manager_id and forces status OPEN", async () => {
     const t = convexTest(schema, modules);
     const { manager, student, hostel } = await scenario(t);
     const complaint = await t.mutation(api.complaints.create, {
@@ -81,7 +81,7 @@ describe("complaints", () => {
     expect(typeof complaint.created_at).toBe("string");
   });
 
-  it("list nests USERS and HOSTEL and filters by student, hostel and manager", async () => {
+  it("list nests USERS and HOSTEL", async () => {
     const t = convexTest(schema, modules);
     const { manager, student, hostel } = await scenario(t);
     await t.mutation(api.complaints.create, {
@@ -89,19 +89,72 @@ describe("complaints", () => {
               hostel_manager_id: manager.id },
       secret,
     });
-
     const rows = await t.query(api.complaints.list, { secret });
     expect(rows).toHaveLength(1);
     expect(rows[0].USERS).toEqual({ email: student.email, profile_complete: true });
     expect(rows[0].HOSTEL).toEqual({ hostel_name: "Unity Hall" });
-
-    expect(await t.query(api.complaints.list, { studentId: student.id, secret })).toHaveLength(1);
-    expect(await t.query(api.complaints.list, { hostelId: hostel.id, secret })).toHaveLength(1);
-    expect(await t.query(api.complaints.list, { hostelManagerId: manager.id, secret })).toHaveLength(1);
     expect(await t.query(api.complaints.list, { studentId: "bogus", secret })).toEqual([]);
   });
 
-  it("getByIdWithUser returns the complaint with USERS, or null for a malformed id (Review Focus #1)", async () => {
+  it("list filters by every combination the controller can send", async () => {
+    const t = convexTest(schema, modules);
+    const mk = (name: string, type: string) =>
+      t.mutation(api.users.create, {
+        data: { name, email: `${name}-${Math.random()}@test.com`, emailVerified: false,
+                user_type: type, profile_complete: true },
+        secret,
+      });
+    const mgrA = await mk("A", "HOSTEL_MANAGER");
+    const mgrB = await mk("B", "HOSTEL_MANAGER");
+    const s1 = await mk("s1", "STUDENT");
+    const s2 = await mk("s2", "STUDENT");
+    const mkHostel = (name: string, managerId: string) =>
+      t.mutation(api.hostels.create, {
+        data: { hostel_name: name, location: "N", total_rooms: 0, available_rooms: 0,
+                manager_id: managerId, status: "APPROVED" },
+        secret,
+      });
+    const hShared = await mkHostel("Shared", mgrA.id);
+    const hOther = await mkHostel("Other", mgrB.id);
+    const mkC = async (content: string, student: any, hostel: any, mgr: any) =>
+      (await t.mutation(api.complaints.create, {
+        data: { content, student_id: student.id, hostel_id: hostel.id, hostel_manager_id: mgr.id },
+        secret,
+      })).content as string;
+    // Both managers have a complaint against the SAME hostel.
+    await mkC("s1-shared-A", s1, hShared, mgrA);
+    await mkC("s2-shared-A", s2, hShared, mgrA);
+    await mkC("s1-shared-B", s1, hShared, mgrB);
+    await mkC("s1-other-B", s1, hOther, mgrB);
+    await mkC("s2-other-B", s2, hOther, mgrB);
+    const names = async (args: any) =>
+      ((await t.query(api.complaints.list, { ...args, secret })) as any[])
+        .map((r) => r.content).sort();
+
+    // cross-manager leak guard
+    expect(await names({ hostelId: hShared.id, hostelManagerId: mgrA.id }))
+      .toEqual(["s1-shared-A", "s2-shared-A"]);
+    expect(await names({ hostelId: hShared.id, hostelManagerId: mgrB.id }))
+      .toEqual(["s1-shared-B"]);
+    expect(await names({ hostelId: hShared.id, studentId: s1.id }))
+      .toEqual(["s1-shared-A", "s1-shared-B"]);
+    expect(await names({ studentId: s1.id, hostelManagerId: mgrB.id }))
+      .toEqual(["s1-other-B", "s1-shared-B"]);
+    expect(await names({ studentId: s2.id, hostelManagerId: mgrA.id }))
+      .toEqual(["s2-shared-A"]);
+    expect(await names({ hostelManagerId: mgrA.id }))
+      .toEqual(["s1-shared-A", "s2-shared-A"]);
+    expect(await names({ studentId: s1.id }))
+      .toEqual(["s1-other-B", "s1-shared-A", "s1-shared-B"]);
+    // hostel alone is deliberately unnarrowed: both managers' rows
+    expect(await names({ hostelId: hShared.id }))
+      .toEqual(["s1-shared-A", "s1-shared-B", "s2-shared-A"]);
+    // all three
+    expect(await names({ hostelId: hShared.id, studentId: s1.id, hostelManagerId: mgrA.id }))
+      .toEqual(["s1-shared-A"]);
+  });
+
+  it("getByIdWithUser returns the complaint with USERS, or null for a malformed id", async () => {
     const t = convexTest(schema, modules);
     const { manager, student, hostel } = await scenario(t);
     const complaint = await t.mutation(api.complaints.create, {
