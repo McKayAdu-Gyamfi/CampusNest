@@ -203,16 +203,36 @@ describe("amenities", () => {
     const t = convexTest(schema, modules);
     const { roomId } = await seedHostelAndRoom(t);
     const [row] = await t.mutation(api.amenities.addForRoom, { roomId, names: ["LAUNDRY"], secret });
-    const result = await t.mutation(api.amenities.removeRoomAmenity, { id: row.id, secret });
+    const result = await t.mutation(api.amenities.removeRoomAmenity, { id: row.id, roomId, secret });
     expect(result).toEqual({ success: true });
     expect(await allRoomAmenities(t)).toHaveLength(0);
+  });
+
+  it("removeRoomAmenity leaves a row alone when it belongs to a different room", async () => {
+    const t = convexTest(schema, modules);
+    const { hostelId, roomId: roomA } = await seedHostelAndRoom(t);
+    const roomB = await t.run(async (ctx) =>
+      await ctx.db.insert("rooms", {
+        room_number: "B1", room_type: "SINGLE", price_per_bed: 400, capacity: 2,
+        current_occupancy: 0, is_available: true, hostel_id: hostelId,
+        created_at: Date.now(), updated_at: Date.now(),
+      })
+    );
+    await t.mutation(api.amenities.addForRoom, { roomId: roomA, names: ["WIFI"], secret });
+    const [rowB] = await t.mutation(api.amenities.addForRoom, { roomId: roomB, names: ["WIFI"], secret });
+
+    const result = await t.mutation(api.amenities.removeRoomAmenity, { id: rowB.id, roomId: roomA, secret });
+    expect(result).toEqual({ success: true });
+    const remaining = await allRoomAmenities(t);
+    expect(remaining).toHaveLength(2);
+    expect(remaining.some((r: any) => r._id === rowB.id)).toBe(true);
   });
 
   it("removeRoomAmenity is a no-op resolving { success: true } for a malformed id", async () => {
     const t = convexTest(schema, modules);
     const { roomId } = await seedHostelAndRoom(t);
     await t.mutation(api.amenities.addForRoom, { roomId, names: ["LAUNDRY"], secret });
-    const result = await t.mutation(api.amenities.removeRoomAmenity, { id: "bogus", secret });
+    const result = await t.mutation(api.amenities.removeRoomAmenity, { id: "bogus", roomId, secret });
     expect(result).toEqual({ success: true });
     expect(await allRoomAmenities(t)).toHaveLength(1);
   });

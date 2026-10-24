@@ -16,6 +16,7 @@ import type * as lib_secureFunction from "../lib/secureFunction.js";
 import type * as lib_toApiDoc from "../lib/toApiDoc.js";
 import type * as lib_toApiRow from "../lib/toApiRow.js";
 import type * as lib_whereMatch from "../lib/whereMatch.js";
+import type * as rooms from "../rooms.js";
 import type * as sessions from "../sessions.js";
 import type * as users from "../users.js";
 import type * as verifications from "../verifications.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   "lib/toApiDoc": typeof lib_toApiDoc;
   "lib/toApiRow": typeof lib_toApiRow;
   "lib/whereMatch": typeof lib_whereMatch;
+  rooms: typeof rooms;
   sessions: typeof sessions;
   users: typeof users;
   verifications: typeof verifications;

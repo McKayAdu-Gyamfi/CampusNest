@@ -124,10 +124,18 @@ export const replaceForRoom = secureMutation(
   }
 );
 
-export const removeRoomAmenity = secureMutation({ id: v.string() }, async (ctx, { id }) => {
-  const rowId = ctx.db.normalizeId("roomAmenities", id);
-  if (!rowId) return { success: true };
-  const row = await ctx.db.get(rowId);
-  if (row) await ctx.db.delete(rowId);
-  return { success: true };
-});
+// roomId is the room from the URL the caller was authorized against. A row
+// belonging to any other room is left alone and the response is the same
+// no-op shape, so the endpoint leaks nothing about other rooms' rows.
+export const removeRoomAmenity = secureMutation(
+  { id: v.string(), roomId: v.string() },
+  async (ctx, { id, roomId }) => {
+    const rowId = ctx.db.normalizeId("roomAmenities", id);
+    if (!rowId) return { success: true };
+    const expectedRoomId = ctx.db.normalizeId("rooms", roomId);
+    if (!expectedRoomId) return { success: true };
+    const row = await ctx.db.get(rowId);
+    if (row && row.room_id === expectedRoomId) await ctx.db.delete(rowId);
+    return { success: true };
+  }
+);

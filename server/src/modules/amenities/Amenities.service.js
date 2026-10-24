@@ -65,9 +65,9 @@ export const addRoomAmenities = async (roomId, amenities) => {
   }
 };
 
-export const removeRoomAmenity = async (id) => {
+export const removeRoomAmenity = async (id, roomId) => {
   try {
-    return await cm(api.amenities.removeRoomAmenity, { id });
+    return await cm(api.amenities.removeRoomAmenity, { id, roomId });
   } catch (error) {
     throw wrapError(error);
   }
