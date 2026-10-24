@@ -1,7 +1,7 @@
 import { cq, cm } from "../../config/convexClient.js";
 import { api } from "../../../convex/_generated/api.js";
 import * as amenitiesService from "../amenities/Amenities.service.js";
-import { uploadImageToSupabase } from "../../utils/supabaseStorage.js";
+import { uploadImageToConvex } from "../../utils/convexStorage.js";
 
 // GET /api/hostels
 export const getHostels = async (req, res, next) => {
@@ -147,9 +147,9 @@ export const uploadHostelImages = async (req, res, next) => {
 
     const uploadedUrls = [];
 
-    // Upload each file to Supabase Storage
+    // Upload each file to Convex storage
     for (const file of req.files) {
-      const publicUrl = await uploadImageToSupabase(file, 'standard_images', `hostels/${id}`);
+      const publicUrl = await uploadImageToConvex(file);
       uploadedUrls.push(publicUrl);
     }
 

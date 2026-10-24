@@ -1,7 +1,7 @@
 import multer from 'multer';
 
-// Use memory storage to avoid saving files to disk since we will upload
-// directly from memory buffer to Supabase.
+// Use memory storage to avoid saving files to disk since we upload
+// directly from the memory buffer to Convex storage.
 const storage = multer.memoryStorage();
 
 // Accept only JPEG and PNG files

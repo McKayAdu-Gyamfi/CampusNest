@@ -12,6 +12,7 @@ import type * as accounts from "../accounts.js";
 import type * as amenities from "../amenities.js";
 import type * as bookings from "../bookings.js";
 import type * as complaints from "../complaints.js";
+import type * as files from "../files.js";
 import type * as hostels from "../hostels.js";
 import type * as lib_applySort from "../lib/applySort.js";
 import type * as lib_secureFunction from "../lib/secureFunction.js";
@@ -35,6 +36,7 @@ declare const fullApi: ApiFromModules<{
   amenities: typeof amenities;
   bookings: typeof bookings;
   complaints: typeof complaints;
+  files: typeof files;
   hostels: typeof hostels;
   "lib/applySort": typeof lib_applySort;
   "lib/secureFunction": typeof lib_secureFunction;
