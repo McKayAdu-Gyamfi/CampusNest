@@ -2503,12 +2503,17 @@ export const updateStatus = secureMutation(
     const booking = await ctx.db.get(bookingId);
     if (!booking) return null;
 
+    // Occupancy counts exactly the CONFIRMED bookings, so the rule is
+    // symmetric: +1 on entering CONFIRMED, -1 on leaving it for ANY other
+    // status. Enumerating only CANCELLED and CHECKED_OUT on the way out
+    // leaves CONFIRMED -> PENDING holding a bed and the student's
+    // current_room_id, and a later PENDING -> CONFIRMED then counts the
+    // same student a second time. The status schema accepts PENDING, so a
+    // manager can reach that through PATCH /api/bookings/:id.
     const previous = booking.status;
     let occupancyChange = 0;
     if (status === "CONFIRMED" && previous !== "CONFIRMED") occupancyChange = 1;
-    else if (previous === "CONFIRMED" && (status === "CANCELLED" || status === "CHECKED_OUT")) {
-      occupancyChange = -1;
-    }
+    else if (previous === "CONFIRMED" && status !== "CONFIRMED") occupancyChange = -1;
 
     const room = await ctx.db.get(booking.room_id);
 
