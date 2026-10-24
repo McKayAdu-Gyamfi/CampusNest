@@ -38,7 +38,10 @@ export const adminUpdateUserSchema = z.object({
   body: z.object({
     profile_complete: z.boolean().optional(),
     course: z.string().optional(),
-    current_room_id: z.string().optional(),
+    // current_room_id is not admin-settable either: it is derived from a
+    // CONFIRMED booking and written only by bookings.updateStatus (and
+    // cleared by rooms.remove). Allowing it here placed a student in a room
+    // with no booking, approval, or payment.
     student_id: z.string().optional(),
     user_type: z.enum(["STUDENT", "HOSTEL_MANAGER", "ADMIN"]).optional(),
     name: z.string().optional(),

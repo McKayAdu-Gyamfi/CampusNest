@@ -34,7 +34,7 @@ export const getHostelById = async (req, res, next) => {
 // POST /api/hostels
 export const createHostel = async (req, res, next) => {
   try {
-    const { hostel_name, location, description, total_rooms, available_rooms, distance_from_campus } = req.body;
+    const { hostel_name, location, description, distance_from_campus } = req.body;
     // Force manager_id to be the authenticated user's ID
     const manager_id = req.user.id;
 
@@ -45,8 +45,13 @@ export const createHostel = async (req, res, next) => {
 
     const data = await cm(api.hostels.create, {
       data: {
-        hostel_name, location, description, total_rooms,
-        available_rooms: available_rooms ?? 0,
+        hostel_name, location, description,
+        // Both counters are derived from the rooms that actually exist and
+        // are maintained solely by rooms.create/rooms.remove. A new hostel
+        // has no rooms, so they start at 0 — accepting a caller's value
+        // here left every hostel permanently one room too high.
+        total_rooms: 0,
+        available_rooms: 0,
         distance_from_campus, manager_id,
         status: "PENDING", // requires admin approval before appearing in public listings
       },
@@ -64,7 +69,12 @@ export const updateHostel = async (req, res, next) => {
     // status/manager_id are intentionally excluded here even though the
     // caller already owns this hostel — approval and ownership transfer
     // are admin-only actions (status via PATCH /:id/status below).
-    const { status, manager_id, ...rest } = req.body;
+    //
+    // total_rooms/available_rooms are excluded for the same reason: they are
+    // derived from the rooms that exist and are owned by rooms.create /
+    // rooms.remove / bookings.updateStatus. Forwarding them let a manager
+    // advertise any number of free rooms in the public listing.
+    const { status, manager_id, total_rooms, available_rooms, ...rest } = req.body;
 
     const data = await cm(api.hostels.update, { id: req.params.id, patch: rest });
     if (!data) {
