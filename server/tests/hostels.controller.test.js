@@ -3,7 +3,6 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 const cmMock = vi.hoisted(() => vi.fn());
 const cqMock = vi.hoisted(() => vi.fn());
 vi.mock('../src/config/convexClient.js', () => ({ cm: cmMock, cq: cqMock, ca: vi.fn() }));
-vi.mock('../src/config/db.js', () => ({ supabase: {} }));
 vi.mock('../src/utils/convexStorage.js', () => ({ uploadImageToConvex: vi.fn() }));
 
 import { updateHostel } from '../src/modules/hostels/hostels.controller.js';

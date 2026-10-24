@@ -22,7 +22,7 @@ export const registerManager = async (req, res, next) => {
 
     const { user } = response;
 
-    // 2. Immediately update the new user in Supabase to specify type
+    // 2. Immediately patch the new user's row in Convex to specify type
     // Since BetterAuth created the user row, we just mark them as HOSTEL_MANAGER
     const updatedUser = await cm(api.users.updateProfile, {
       id: user.id,

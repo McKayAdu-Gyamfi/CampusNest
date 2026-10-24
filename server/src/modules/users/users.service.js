@@ -21,10 +21,14 @@ export const updateMe = async (userId, updates, userType) => {
     const { user_type, student_id, course, profile_complete, ...safeUpdates } = updates;
     patch = safeUpdates;
   } else if (userType === "STUDENT") {
+    // user_type is stripped here as well as in the branches below: zod
+    // already rejects it, but this is a self-escalation path, so the three
+    // branches stay symmetric rather than relying on one layer.
+    const { user_type, ...safeUpdates } = updates;
     const current = await cq(api.users.getMeWithRoom, { id: userId });
     if (!current) throw new UserServiceError("User profile not found in database", 404);
-    const merged = { student_id: current.student_id, course: current.course, ...updates };
-    patch = { ...updates, profile_complete: !!(merged.student_id && merged.course) };
+    const merged = { student_id: current.student_id, course: current.course, ...safeUpdates };
+    patch = { ...safeUpdates, profile_complete: !!(merged.student_id && merged.course) };
   } else {
     const { user_type, ...safeUpdates } = updates;
     patch = safeUpdates;

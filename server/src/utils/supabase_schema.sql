@@ -1,3 +1,9 @@
+-- HISTORICAL REFERENCE ONLY -- NOT a live runbook. Do not run this file.
+-- CampusNest runs entirely on Convex; the authoritative schema is
+-- server/convex/schema.ts. The Supabase/Postgres instance this script
+-- described was deleted in October 2026. Kept only to document the
+-- pre-migration data model.
+
 -- Enums
 CREATE TYPE user_type AS ENUM ('STUDENT', 'HOSTEL_MANAGER', 'ADMIN');
 CREATE TYPE room_type AS ENUM ('SINGLE', 'DOUBLE', 'TRIPLE', 'QUAD');
