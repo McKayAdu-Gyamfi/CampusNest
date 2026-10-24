@@ -16,7 +16,7 @@ async function signUp({ email, password, name }) {
     const response = await auth.api.signUpEmail({ body: { email, password, name } });
     return response.user;
   } catch (err) {
-    throw new Error(`Could not create ${email}: ${err?.message ?? err}`);
+    throw new Error(`Could not create ${email}: ${err?.message || err?.name || String(err)}`, { cause: err });
   }
 }
 
@@ -28,17 +28,39 @@ async function patchProfile(email, id, patch) {
 }
 
 // The accounts use publicly-known passwords, so refuse anything but a dev
-// deployment. Fails closed when CONVEX_DEPLOYMENT is unset.
+// deployment. Validates the target the client will actually write to
+// (CONVEX_URL), not just CONVEX_DEPLOYMENT, and fails closed on anything
+// unset, unparseable or inconsistent.
 function assertDevDeployment() {
-  const deployment = process.env.CONVEX_DEPLOYMENT;
-  if (deployment?.startsWith("dev:")) return;
   if (process.env.SEED_ALLOW_NON_DEV === "1") {
-    console.warn("!!! WARNING: SEED_ALLOW_NON_DEV=1 set; seeding a NON-DEV deployment with publicly-known passwords !!!");
+    console.warn("!!! WARNING: SEED_ALLOW_NON_DEV=1 set; guard disabled, seeding with publicly-known passwords !!!");
     return;
   }
-  const kind = deployment ? `"${deployment.split(":")[0]}"` : "unknown (CONVEX_DEPLOYMENT is unset)";
+  const deployment = process.env.CONVEX_DEPLOYMENT;
+  const rawUrl = process.env.CONVEX_URL;
+  const problems = [];
+  let name = null;
+  if (!deployment) problems.push("CONVEX_DEPLOYMENT is unset");
+  else if (!deployment.startsWith("dev:")) problems.push(`deployment kind is "${deployment.split(":")[0]}", not dev`);
+  else name = deployment.slice("dev:".length);
+
+  let host = null;
+  if (!rawUrl) problems.push("CONVEX_URL is unset");
+  else {
+    try {
+      host = new URL(rawUrl).hostname;
+    } catch {
+      problems.push(`CONVEX_URL is unparseable (${rawUrl})`);
+    }
+  }
+  if (name && host && host.split(".")[0] !== name) {
+    problems.push(`CONVEX_URL host "${host}" does not belong to deployment "${name}" (client would write to a different deployment)`);
+  }
+  if (problems.length === 0) return;
+
   console.error(
-    `Refusing to seed: the deployment kind is ${kind}, not dev.\n` +
+    `Refusing to seed:\n  - ${problems.join("\n  - ")}\n` +
+      `  (CONVEX_DEPLOYMENT=${deployment ?? "<unset>"}, CONVEX_URL host=${host ?? "<none>"})\n` +
       "This script creates accounts (including a HOSTEL_MANAGER) with passwords published in the repo, so it is dev-only.\n" +
       "Set SEED_ALLOW_NON_DEV=1 to override deliberately.",
   );
@@ -48,13 +70,25 @@ function assertDevDeployment() {
 async function main() {
   assertDevDeployment();
 
-  for (const { email } of [MANAGER, STUDENT]) {
-    const existing = await cq(api.users.findOne, { where: [{ field: "email", value: email }] });
-    if (existing) {
-      console.log(`Seed data already present (found ${email}). Nothing was written.`);
+  const found = [];
+  for (const acct of [{ ...MANAGER, role: "HOSTEL_MANAGER" }, { ...STUDENT, role: "STUDENT" }]) {
+    const user = await cq(api.users.findOne, { where: [{ field: "email", value: acct.email }] });
+    if (user) found.push({ ...acct, user });
+  }
+  if (found.length > 0) {
+    const broken = found.filter(({ user, role }) => user.user_type !== role || user.profile_complete !== true);
+    if (broken.length === 0 && found.length === 2) {
+      console.log(`Seed data already present (found ${found.map((f) => f.email).join(", ")}). Nothing was written.`);
       console.log("To re-seed, clear the deployment from the Convex dashboard first.");
       process.exit(0);
     }
+    console.error("Deployment is PARTIALLY SEEDED; nothing was written.");
+    for (const f of found) {
+      console.error(`  ${f.email}: user_type=${f.user.user_type} (expected ${f.role}), profile_complete=${f.user.profile_complete} (expected true)`);
+    }
+    if (found.length < 2) console.error("  the other seed account is missing");
+    console.error("Clear the deployment from the Convex dashboard before re-seeding.");
+    process.exit(1);
   }
 
   console.log("Seeding Convex deployment...");
@@ -136,6 +170,8 @@ async function main() {
 }
 
 main().catch((err) => {
-  console.error("\nSeeding failed:", err.message);
+  const message = err?.message || err?.name || err?.cause?.message || String(err);
+  console.error("\nSeeding failed:", message);
+  if (err?.cause) console.error("Caused by:", err.cause);
   process.exit(1);
 });
