@@ -15,6 +15,13 @@ export const getBookings = async (req, res, next) => {
       args.studentId = String(student_id);
     }
 
+    // A manager is scoped to the rooms of the hostels they manage, the way
+    // getBookingById checks ROOM.HOSTEL.manager_id for a single row. This
+    // composes with any studentId filter above; ADMIN stays unscoped.
+    if (req.user.user_type === "HOSTEL_MANAGER") {
+      args.managerId = req.user.id;
+    }
+
     const data = await cq(api.bookings.list, args);
     res.json({ success: true, data });
   } catch (err) {

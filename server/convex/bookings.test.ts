@@ -247,6 +247,58 @@ describe("bookings", () => {
     expect(await occ(t, room.id)).toBe(1);
   });
 
+  it("list scoped by managerId returns only that manager's bookings", async () => {
+    const t = convexTest(schema, modules);
+    const a = await scenario(t);
+    const b = await scenario(t);
+
+    const bookingA = await book(t, a.student.id, a.room.id);
+    const bookingB = await book(t, b.student.id, b.room.id);
+
+    const forA = await t.query(api.bookings.list, { managerId: a.manager.id, secret });
+    expect(forA.map((r: any) => r.id)).toEqual([bookingA.id]);
+    expect(forA[0].USERS.email).toBe(a.student.email);
+
+    const forB = await t.query(api.bookings.list, { managerId: b.manager.id, secret });
+    expect(forB.map((r: any) => r.id)).toEqual([bookingB.id]);
+
+    // An ADMIN-style unscoped call still sees both.
+    const all = await t.query(api.bookings.list, { secret });
+    expect(all.map((r: any) => r.id).sort()).toEqual([bookingA.id, bookingB.id].sort());
+
+    expect(await t.query(api.bookings.list, { managerId: "bogus", secret })).toEqual([]);
+  });
+
+  it("list composes managerId with studentId so both must match", async () => {
+    const t = convexTest(schema, modules);
+    const a = await scenario(t);
+    const b = await scenario(t);
+
+    // a.student books in both managers' rooms; b.student books only in b's.
+    const aInA = await book(t, a.student.id, a.room.id);
+    const aInB = await book(t, a.student.id, b.room.id);
+    const bInB = await book(t, b.student.id, b.room.id);
+
+    const aStudentInAsRooms = await t.query(api.bookings.list, {
+      managerId: a.manager.id, studentId: a.student.id, secret,
+    });
+    expect(aStudentInAsRooms.map((r: any) => r.id)).toEqual([aInA.id]);
+
+    const aStudentInBsRooms = await t.query(api.bookings.list, {
+      managerId: b.manager.id, studentId: a.student.id, secret,
+    });
+    expect(aStudentInBsRooms.map((r: any) => r.id)).toEqual([aInB.id]);
+
+    // b's student has nothing in a's rooms.
+    expect(
+      await t.query(api.bookings.list, { managerId: a.manager.id, studentId: b.student.id, secret }),
+    ).toEqual([]);
+
+    const bsRooms = await t.query(api.bookings.list, { managerId: b.manager.id, secret });
+    expect(bsRooms.map((r: any) => r.id).sort()).toEqual([aInB.id, bInB.id].sort());
+    expect(bsRooms.map((r: any) => r.id)).not.toContain(aInA.id);
+  });
+
   it("releasing a booking does not clear current_room_id pointing at another room", async () => {
     const t = convexTest(schema, modules);
     const { student, room, hostel } = await scenario(t);

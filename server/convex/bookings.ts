@@ -28,20 +28,64 @@ async function withRelations(ctx: any, booking: any, includeManagerId: boolean) 
   return row;
 }
 
-export const list = secureQuery({ studentId: v.optional(v.string()) }, async (ctx, { studentId }) => {
-  let rows;
-  if (studentId !== undefined) {
-    const id = ctx.db.normalizeId("users", studentId);
-    if (!id) return [];
-    rows = await ctx.db
-      .query("bookings")
-      .withIndex("by_student_id", (q: any) => q.eq("student_id", id))
-      .collect();
-  } else {
-    rows = await ctx.db.query("bookings").collect();
+// studentId and managerId are independent narrowings and compose: a manager
+// filtering by student sees only that student's bookings in their own rooms.
+// Without managerId a HOSTEL_MANAGER would read the whole table, including
+// every other manager's rooms and every student's email (mirrors the
+// hostelManagerId scoping in complaints.list).
+export const list = secureQuery(
+  { studentId: v.optional(v.string()), managerId: v.optional(v.string()) },
+  async (ctx, { studentId, managerId }) => {
+    // Resolve the manager's own rooms first, so the booking read below can
+    // be driven off by_room_id instead of scanning the whole table.
+    let managedRoomIds: Set<string> | null = null;
+    if (managerId !== undefined) {
+      const id = ctx.db.normalizeId("users", managerId);
+      if (!id) return [];
+      const hostels = await ctx.db
+        .query("hostels")
+        .withIndex("by_manager_id", (q: any) => q.eq("manager_id", id))
+        .collect();
+      managedRoomIds = new Set<string>();
+      for (const hostel of hostels) {
+        const rooms = await ctx.db
+          .query("rooms")
+          .withIndex("by_hostel_id", (q: any) => q.eq("hostel_id", hostel._id))
+          .collect();
+        for (const room of rooms) managedRoomIds.add(room._id);
+      }
+    }
+
+    let rows: any[];
+    if (studentId !== undefined) {
+      const id = ctx.db.normalizeId("users", studentId);
+      if (!id) return [];
+      rows = await ctx.db
+        .query("bookings")
+        .withIndex("by_student_id", (q: any) => q.eq("student_id", id))
+        .collect();
+    } else if (managedRoomIds !== null) {
+      rows = [];
+      for (const roomId of managedRoomIds) {
+        const forRoom = await ctx.db
+          .query("bookings")
+          .withIndex("by_room_id", (q: any) => q.eq("room_id", roomId))
+          .collect();
+        rows.push(...forRoom);
+      }
+    } else {
+      rows = await ctx.db.query("bookings").collect();
+    }
+
+    // Narrows the by_student_id result; a no-op on the by_room_id path.
+    if (managedRoomIds !== null) {
+      const allowed = managedRoomIds;
+      rows = rows.filter((b: any) => allowed.has(b.room_id));
+    }
+
+    return await Promise.all(rows.map((b: any) => withRelations(ctx, b, false)));
   }
-  return await Promise.all(rows.map((b: any) => withRelations(ctx, b, false)));
-});
+);
 
 export const getByIdWithRelations = secureQuery({ id: v.string() }, async (ctx, { id }) => {
   const bookingId = ctx.db.normalizeId("bookings", id);

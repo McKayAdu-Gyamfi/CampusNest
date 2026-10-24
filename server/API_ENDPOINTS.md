@@ -10,7 +10,7 @@ This document lists all active API endpoints identified in the project, organize
 - `PUT /:id/amenities` : Bulk update amenities **(Requires Auth, Hostel Owner)**
 - `POST /:id/amenities` : Add single amenity **(Requires Auth, Hostel Owner)**
 - `DELETE /:id/amenities/:amenityId` : Delete amenity **(Requires Auth, Hostel Owner)**
-- `POST /:id/images` : Upload hostel images to Supabase (up to 10) **(Requires Auth, Hostel Owner)**
+- `POST /:id/images` : Upload hostel images to Convex file storage (up to 10) **(Requires Auth, Hostel Owner)**
 
 ## 🛏️ Rooms (`/api/rooms`)
 - `GET /` : Get all rooms **(Public)**
@@ -21,13 +21,13 @@ This document lists all active API endpoints identified in the project, organize
 - `PUT /:id/amenities` : Bulk update room amenities **(Requires Auth, Room Owner)**
 - `POST /:id/amenities` : Add single room amenity **(Requires Auth, Room Owner)**
 - `DELETE /:id/amenities/:amenityId` : Delete room amenity **(Requires Auth, Room Owner)**
-- `POST /:id/images` : Upload room images to Supabase (up to 10) **(Requires Auth, Room Owner)**
+- `POST /:id/images` : Upload room images to Convex file storage (up to 10) **(Requires Auth, Room Owner)**
 - `POST /:id/tours/generate` : Upload a raw panorama photo; orchestrates the temp-pano-api microservice server-to-server (shared internal key, never exposed to the client) and persists the resulting scene **(Requires Auth, Room Owner)**
 - `POST /:id/tours` : Register a scene from an already-generated config URL, without re-running the panorama pipeline **(Requires Auth, Room Owner)**
 - `DELETE /:id/tours/:sceneId` : Delete a room tour scene **(Requires Auth, Room Owner)**
 
 ## 📅 Bookings (`/api/bookings`)
-- `GET /` : View all bookings (Filtered automatically for Students; Managers/Admins may filter by `student_id`) **(Requires Auth)**
+- `GET /` : View bookings (Students see only their own; Managers see only bookings for rooms in hostels they manage; Admins see all. Managers/Admins may additionally filter by `student_id`) **(Requires Auth)**
 - `GET /:id` : Get specific booking details — owner student, the hostel's manager, or ADMIN only **(Requires Auth)**
 - `POST /` : Create a booking **(Requires Auth, complete profile required)**
 - `PATCH /:id` : Update a booking status — students may only cancel their own; managers may only act on bookings for hostels they manage; confirming is rejected with 409 if the room is already at capacity **(Requires Auth)**
