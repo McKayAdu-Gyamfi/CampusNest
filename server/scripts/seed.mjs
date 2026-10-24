@@ -10,6 +10,20 @@ import { api } from "../convex/_generated/api.js";
 
 const MANAGER = { email: "manager@campusnest.test", password: "DemoManager123!", name: "Akosua Mensah" };
 const STUDENT = { email: "student@campusnest.test", password: "DemoStudent123!", name: "Kwame Asante" };
+// Without a seeded ADMIN a fresh deployment has no way to approve a hostel:
+// every signup is forced to STUDENT, /api/auth/register pins HOSTEL_MANAGER,
+// POST /api/users (create-admin) is itself ADMIN-only, and createHostel
+// hardcodes status PENDING — so every hostel stays invisible in the public
+// listing forever. The only other route is hand-editing the dashboard.
+const ADMIN = { email: "admin@campusnest.test", password: "DemoAdmin123!", name: "Nana Owusu" };
+
+// Single source of truth for the pre-flight existence check, the
+// partial-seed role validation, and the expected account count.
+const ACCOUNTS = [
+  { ...MANAGER, role: "HOSTEL_MANAGER" },
+  { ...STUDENT, role: "STUDENT" },
+  { ...ADMIN, role: "ADMIN" },
+];
 
 async function signUp({ email, password, name }) {
   try {
@@ -61,7 +75,7 @@ function assertDevDeployment() {
   console.error(
     `Refusing to seed:\n  - ${problems.join("\n  - ")}\n` +
       `  (CONVEX_DEPLOYMENT=${deployment ?? "<unset>"}, CONVEX_URL host=${host ?? "<none>"})\n` +
-      "This script creates accounts (including a HOSTEL_MANAGER) with passwords published in the repo, so it is dev-only.\n" +
+      "This script creates accounts (including a HOSTEL_MANAGER and an ADMIN) with passwords published in the repo, so it is dev-only.\n" +
       "Set SEED_ALLOW_NON_DEV=1 to override deliberately.",
   );
   process.exit(1);
@@ -71,13 +85,13 @@ async function main() {
   assertDevDeployment();
 
   const found = [];
-  for (const acct of [{ ...MANAGER, role: "HOSTEL_MANAGER" }, { ...STUDENT, role: "STUDENT" }]) {
+  for (const acct of ACCOUNTS) {
     const user = await cq(api.users.findOne, { where: [{ field: "email", value: acct.email }] });
     if (user) found.push({ ...acct, user });
   }
   if (found.length > 0) {
     const broken = found.filter(({ user, role }) => user.user_type !== role || user.profile_complete !== true);
-    if (broken.length === 0 && found.length === 2) {
+    if (broken.length === 0 && found.length === ACCOUNTS.length) {
       console.log(`Seed data already present (found ${found.map((f) => f.email).join(", ")}). Nothing was written.`);
       console.log("To re-seed, clear the deployment from the Convex dashboard first.");
       process.exit(0);
@@ -86,7 +100,10 @@ async function main() {
     for (const f of found) {
       console.error(`  ${f.email}: user_type=${f.user.user_type} (expected ${f.role}), profile_complete=${f.user.profile_complete} (expected true)`);
     }
-    if (found.length < 2) console.error("  the other seed account is missing");
+    if (found.length < ACCOUNTS.length) {
+      const missing = ACCOUNTS.filter((a) => !found.some((f) => f.email === a.email)).map((a) => a.email);
+      console.error(`  missing seed account(s): ${missing.join(", ")}`);
+    }
     console.error("Clear the deployment from the Convex dashboard before re-seeding.");
     process.exit(1);
   }
@@ -104,6 +121,10 @@ async function main() {
     user_type: "STUDENT", profile_complete: true, student_id: "UG-2026-0042", course: "Computer Science",
   });
   console.log(`  student: ${STUDENT.email} / ${STUDENT.password}`);
+
+  const admin = await signUp(ADMIN);
+  await patchProfile(ADMIN.email, admin.id, { user_type: "ADMIN", profile_complete: true });
+  console.log(`  admin:   ${ADMIN.email} / ${ADMIN.password}  (approves hostels via PATCH /api/hostels/:id/status)`);
 
   const unity = await cm(api.hostels.create, {
     data: {
