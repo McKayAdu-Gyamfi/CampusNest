@@ -1,7 +1,7 @@
 import { cq, cm } from "../../config/convexClient.js";
 import { api } from "../../../convex/_generated/api.js";
 import * as amenitiesService from "../amenities/Amenities.service.js";
-import { uploadImageToConvex } from "../../utils/convexStorage.js";
+import { uploadImageToConvex, uploadLargeFileToConvex } from "../../utils/convexStorage.js";
 
 // GET /api/rooms?hostel_id=123
 export const getRooms = async (req, res, next) => {
@@ -165,12 +165,17 @@ export const deleteRoomTourScene = async (req, res, next) => {
 
 // POST /api/rooms/:id/tours/generate
 // Orchestrates the panorama pipeline: this is the ONLY caller the
-// temp-pano-api microservice trusts (via a shared internal key never
-// exposed to the browser). Previously the frontend called that service
-// directly with no auth at all and a client-supplied room_id — anyone
-// could generate/overwrite tour data for any room. Now the client uploads
-// here (same requireAuth + verifyRoomOwnership gate as every other room
-// mutation), and this handler is the one that talks to the Python service.
+// Stores the panorama and a Pannellum config in Convex storage and
+// registers the scene. Previously the frontend called the temp-pano-api
+// Python service directly with no auth and a client-supplied room_id, so
+// anyone could generate or overwrite tour data for any room; the upload
+// now comes through here behind the same requireAuth +
+// verifyRoomOwnership gate as every other room mutation.
+//
+// That Python service tiled the panorama and uploaded the tiles to
+// Supabase Storage, which no longer exists. It is no longer called from
+// here — see the comment inside for why a tiled tour cannot be stored in
+// Convex storage at all.
 export const generateRoomTour = async (req, res, next) => {
   try {
     const { id } = req.params;
@@ -183,32 +188,47 @@ export const generateRoomTour = async (req, res, next) => {
       return res.status(400).json({ success: false, message: "scene_name is required" });
     }
 
-    const panoApiUrl = process.env.PANO_API_URL;
-    const panoApiKey = process.env.PANO_API_KEY;
-    if (!panoApiUrl || !panoApiKey) {
-      throw new Error("PANO_API_URL/PANO_API_KEY are not configured on this server");
+    let parsedHotspots = [];
+    if (hotspots) {
+      try {
+        parsedHotspots = typeof hotspots === "string" ? JSON.parse(hotspots) : hotspots;
+      } catch {
+        return res.status(400).json({ success: false, message: "hotspots must be valid JSON" });
+      }
+      if (!Array.isArray(parsedHotspots)) {
+        return res.status(400).json({ success: false, message: "hotspots must be an array" });
+      }
     }
 
-    const form = new FormData();
-    form.append("room_id", id);
-    if (hotspots) form.append("hotspots", typeof hotspots === "string" ? hotspots : JSON.stringify(hotspots));
-    form.append("image", new Blob([req.file.buffer], { type: req.file.mimetype }), req.file.originalname);
+    // The panorama goes to Convex storage whole, as a single
+    // equirectangular image, rather than through the Python service's
+    // multiresolution tiler. Pannellum's multiRes config addresses tiles by
+    // a path template ("/%l/%s%y_%x"), and Convex storage gives every file
+    // an opaque unrelated URL with no paths to interpolate into, so a tiled
+    // tour cannot be expressed against it. The viewer already renders
+    // single-image scenes (see client/src/pages/LivePreview.tsx), so this
+    // matches what it actually consumes.
+    const panoramaUrl = await uploadLargeFileToConvex(req.file.buffer, req.file.mimetype);
 
-    const panoResponse = await fetch(`${panoApiUrl}/api/panorama/tour`, {
-      method: "POST",
-      headers: { "X-Internal-Key": panoApiKey },
-      body: form,
-    });
+    // A standalone Pannellum config pointing at that absolute URL. Stored
+    // as its own file so scene_config_url keeps meaning "a config a viewer
+    // can fetch", exactly as it did when the Python service produced one.
+    const config = {
+      type: "equirectangular",
+      panorama: panoramaUrl,
+      autoLoad: true,
+      hotSpots: parsedHotspots,
+    };
 
-    const panoResult = await panoResponse.json().catch(() => ({}));
-    if (!panoResponse.ok) {
-      return res.status(502).json({ success: false, message: panoResult.detail || "Panorama processing failed" });
-    }
+    const configUrl = await uploadLargeFileToConvex(
+      Buffer.from(JSON.stringify(config), "utf8"),
+      "application/json"
+    );
 
     const sceneData = await cm(api.rooms.addTourScene, {
       roomId: id,
       scene_name,
-      scene_config_url: panoResult.tour_url,
+      scene_config_url: configUrl,
     });
 
     res.status(201).json({ success: true, data: sceneData });

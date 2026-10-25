@@ -5,7 +5,7 @@ import { createRoomSchema, updateRoomSchema } from "./rooms.schema.js";
 import { updateAmenitiesSchema, addAmenitySchema } from "../amenities/Amenities.schema.js";
 import { requireAuth, requireRole } from "../../middlewares/auth.middleware.js";
 import { verifyRoomOwnership } from "../../middlewares/verifyOwnership.js";
-import { uploadMiddleware } from "../../middlewares/upload.middleware.js";
+import { uploadMiddleware, panoramaUploadMiddleware } from "../../middlewares/upload.middleware.js";
 
 const router = Router();
 
@@ -28,7 +28,7 @@ router.post("/:id/images", requireAuth, verifyRoomOwnership, uploadMiddleware.ar
 router.delete("/:id/tours/:sceneId", requireAuth, verifyRoomOwnership, controllers.deleteRoomTourScene);
 
 // Generate a tour scene from a raw panorama photo (orchestrates temp-pano-api)
-router.post("/:id/tours/generate", requireAuth, verifyRoomOwnership, uploadMiddleware.single("image"), controllers.generateRoomTour);
+router.post("/:id/tours/generate", requireAuth, verifyRoomOwnership, panoramaUploadMiddleware.single("image"), controllers.generateRoomTour);
 
 // Register a scene from an already-generated config URL
 router.post("/:id/tours", requireAuth, verifyRoomOwnership, controllers.createRoomTourScene);
