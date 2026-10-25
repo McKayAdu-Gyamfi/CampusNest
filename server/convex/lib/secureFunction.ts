@@ -58,3 +58,31 @@ export function secureAction(args: Record<string, any>, handler: (ctx: any, args
     },
   });
 }
+
+// The panorama service gets its OWN secret rather than the adapter secret.
+// CONVEX_ADAPTER_SECRET gates all of this deployment's functions, so a
+// second service holding it would turn a compromise of that service into
+// full read access to session tokens and password hashes plus the ability
+// to self-promote to ADMIN. PANO_CONVEX_SECRET is accepted only by the two
+// tour-upload functions, so the worst a compromised pano service can do is
+// write files nothing references.
+function checkPanoSecret(secret: string): void {
+  const expected = process.env.PANO_CONVEX_SECRET;
+  if (!expected) {
+    throw new Error("PANO_CONVEX_SECRET is not configured on this deployment");
+  }
+  if (secret.length !== expected.length || secret !== expected) {
+    throw new Error("Unauthorized: invalid pano secret");
+  }
+}
+
+export function securePanoMutation(args: Record<string, any>, handler: (ctx: any, args: any) => any) {
+  return mutation({
+    args: { ...args, panoSecret: v.string() },
+    handler: async (ctx: any, allArgs: any) => {
+      const { panoSecret, ...rest } = allArgs;
+      checkPanoSecret(panoSecret);
+      return await handler(ctx, rest);
+    },
+  });
+}

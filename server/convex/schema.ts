@@ -158,6 +158,18 @@ export default defineSchema({
   }).index("by_student_id", ["student_id"])
     .index("by_room_id", ["room_id"]),
 
+  // Maps a tour's relative file path (as Pannellum's multiRes template
+  // addresses it) to the opaque Convex storage id holding that file.
+  // Convex storage has no paths, so this table plus the /tour/ HTTP route
+  // in convex/http.ts is what lets a tiled panorama be served at all.
+  tourFiles: defineTable({
+    tour_id: v.string(),
+    path: v.string(),
+    storage_id: v.string(),
+  })
+    .index("by_tour_id", ["tour_id"])
+    .index("by_tour_id_path", ["tour_id", "path"]),
+
   complaints: defineTable({
     content: v.string(),
     status: v.union(v.literal("OPEN"), v.literal("IN_PROGRESS"), v.literal("RESOLVED")),

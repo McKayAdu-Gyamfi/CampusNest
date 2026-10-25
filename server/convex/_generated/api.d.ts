@@ -14,6 +14,7 @@ import type * as bookings from "../bookings.js";
 import type * as complaints from "../complaints.js";
 import type * as files from "../files.js";
 import type * as hostels from "../hostels.js";
+import type * as http from "../http.js";
 import type * as lib_applySort from "../lib/applySort.js";
 import type * as lib_secureFunction from "../lib/secureFunction.js";
 import type * as lib_toApiDoc from "../lib/toApiDoc.js";
@@ -22,6 +23,7 @@ import type * as lib_whereMatch from "../lib/whereMatch.js";
 import type * as reviews from "../reviews.js";
 import type * as rooms from "../rooms.js";
 import type * as sessions from "../sessions.js";
+import type * as tours from "../tours.js";
 import type * as users from "../users.js";
 import type * as verifications from "../verifications.js";
 
@@ -38,6 +40,7 @@ declare const fullApi: ApiFromModules<{
   complaints: typeof complaints;
   files: typeof files;
   hostels: typeof hostels;
+  http: typeof http;
   "lib/applySort": typeof lib_applySort;
   "lib/secureFunction": typeof lib_secureFunction;
   "lib/toApiDoc": typeof lib_toApiDoc;
@@ -46,6 +49,7 @@ declare const fullApi: ApiFromModules<{
   reviews: typeof reviews;
   rooms: typeof rooms;
   sessions: typeof sessions;
+  tours: typeof tours;
   users: typeof users;
   verifications: typeof verifications;
 }>;
