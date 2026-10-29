@@ -201,3 +201,6 @@ cheaply.
   flow is wired.
 - **Missing manager.** A hostel with no `manager_id` shows "Unassigned" in
   the admin lists and is absent from every manager's stats.
+- **Admin revenue chart.** Real month-by-month series (last 7 months, UTC)
+  computed from bookings by creation month; trend badges removed. The
+  hardcoded 96/92/88% figures become real per-hostel occupancy rows.

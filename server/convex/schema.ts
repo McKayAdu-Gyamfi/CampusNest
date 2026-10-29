@@ -76,11 +76,13 @@ export default defineSchema({
     available_rooms: v.number(),
     distance_from_campus: v.optional(v.number()),
     manager_id: v.optional(v.id("users")),
+    school_id: v.optional(v.id("schools")),
     status: v.union(v.literal("PENDING"), v.literal("APPROVED"), v.literal("REJECTED")),
     created_at: v.number(),
     updated_at: v.number(),
   }).index("by_manager_id", ["manager_id"])
-    .index("by_status", ["status"]),
+    .index("by_status", ["status"])
+    .index("by_school_id", ["school_id"]),
 
   hostelImages: defineTable({
     hostel_id: v.id("hostels"),
@@ -169,6 +171,22 @@ export default defineSchema({
   })
     .index("by_tour_id", ["tour_id"])
     .index("by_tour_id_path", ["tour_id", "path"]),
+
+  // Singleton: at most one row. Absent row means defaults (see settings.ts).
+  settings: defineTable({
+    platform_name: v.string(),
+    support_email: v.string(),
+    maintenance_mode: v.boolean(),
+    updated_at: v.number(),
+  }),
+
+  schools: defineTable({
+    name: v.string(),
+    location: v.string(),
+    email_domain: v.string(),
+    created_at: v.number(),
+    updated_at: v.number(),
+  }).index("by_email_domain", ["email_domain"]),
 
   complaints: defineTable({
     content: v.string(),

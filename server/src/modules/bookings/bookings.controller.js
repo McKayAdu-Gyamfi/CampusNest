@@ -78,6 +78,12 @@ export const createBooking = async (req, res, next) => {
 
     res.status(201).json({ success: true, data });
   } catch (err) {
+    if (err.data?.code === "MAINTENANCE_MODE") {
+      return res.status(503).json({
+        success: false,
+        message: "Bookings are temporarily paused for maintenance. Please try again later.",
+      });
+    }
     next(err);
   }
 };

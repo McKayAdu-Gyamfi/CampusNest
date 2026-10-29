@@ -1,6 +1,7 @@
 // server/convex/bookings.ts
 import { v, ConvexError } from "convex/values";
 import { toApiRow } from "./lib/toApiRow";
+import { readSettings } from "./settings";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
 
 const bookingStatus = v.union(
@@ -96,6 +97,12 @@ export const getByIdWithRelations = secureQuery({ id: v.string() }, async (ctx, 
 });
 
 export const create = secureMutation({ data: v.any() }, async (ctx, { data }) => {
+  // Maintenance mode blocks new bookings only; existing bookings keep moving
+  // through their status transitions. A code, not a message, because the
+  // controller maps it to 503 and Convex redacts messages in production.
+  if ((await readSettings(ctx)).maintenance_mode) {
+    throw new ConvexError({ code: "MAINTENANCE_MODE" });
+  }
   const roomId = ctx.db.normalizeId("rooms", data.room_id);
   if (!roomId) throw new Error("Room not found");
   const studentId = ctx.db.normalizeId("users", data.student_id);
