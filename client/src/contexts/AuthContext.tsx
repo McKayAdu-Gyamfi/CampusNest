@@ -10,6 +10,9 @@ export interface AuthUser {
   name: string;
   role: FrontendRole;
   profileComplete: boolean;
+  studentId?: string;
+  course?: string;
+  emailVerified: boolean;
 }
 
 const ROLE_CACHE_KEY = "cached_user_type";
@@ -31,6 +34,9 @@ function toAuthUser(backendUser: BackendUser): AuthUser {
     name: backendUser.name,
     role: toFrontendRole(backendUser.user_type),
     profileComplete: backendUser.profile_complete,
+    studentId: backendUser.student_id,
+    course: backendUser.course,
+    emailVerified: !!backendUser.emailVerified,
   };
 }
 
@@ -51,7 +57,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // there's no cache at all (first-ever visit), there's nothing to show
   // optimistically, so isLoading starts true.
   const [user, setUser] = useState<AuthUser | null>(
-    cachedRole ? { id: "", email: "", name: "", role: cachedRole, profileComplete: false } : null
+    cachedRole ? { id: "", email: "", name: "", role: cachedRole, profileComplete: false, emailVerified: false } : null
   );
   const [isLoading, setIsLoading] = useState(!cachedRole);
 

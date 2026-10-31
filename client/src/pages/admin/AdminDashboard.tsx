@@ -20,7 +20,7 @@ export default function AdminDashboard() {
           <h1 className="text-[28px] font-extrabold tracking-tight text-foreground">Platform overview</h1>
           <p className="text-[13px] text-muted-foreground font-medium">Spring term 2026 · updated 5 min ago</p>
         </div>
-        <button className="w-12 h-12 bg-white dark:bg-card border border-border/50 rounded-full flex items-center justify-center relative shadow-sm hover:bg-accent transition-colors cursor-pointer">
+        <button className="w-12 h-12 bg-card border border-border/50 rounded-full flex items-center justify-center relative shadow-sm hover:bg-accent transition-colors cursor-pointer">
           <Bell className="w-5 h-5 text-[#5E5B58]" />
         </button>
       </div>
@@ -28,7 +28,7 @@ export default function AdminDashboard() {
       {/* 4 Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1 */}
-        <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-5 shadow-sm">
+        <div className="bg-card border border-border/40 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-xl bg-[#F8F4EE] flex items-center justify-center text-[#C56A30]">
               <GraduationCap className="w-5 h-5" />
@@ -42,7 +42,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Card 2 */}
-        <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-5 shadow-sm">
+        <div className="bg-card border border-border/40 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-xl bg-[#F8F4EE] flex items-center justify-center text-[#C56A30]">
               <FileText className="w-5 h-5" />
@@ -56,7 +56,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Card 3 */}
-        <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-5 shadow-sm">
+        <div className="bg-card border border-border/40 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-xl bg-[#F8F4EE] flex items-center justify-center text-[#C56A30]">
               <BedDouble className="w-5 h-5" />
@@ -70,7 +70,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Card 4 */}
-        <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-5 shadow-sm">
+        <div className="bg-card border border-border/40 rounded-2xl p-5 shadow-sm">
           <div className="flex items-center justify-between mb-3">
             <div className="w-10 h-10 rounded-xl bg-[#F8F4EE] flex items-center justify-center text-[#C56A30]">
               <Banknote className="w-5 h-5" />
@@ -87,7 +87,7 @@ export default function AdminDashboard() {
       {/* Middle Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Booking Volume Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-card border border-border/40 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-card border border-border/40 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
           <div className="mb-6">
             <h3 className="font-extrabold text-lg text-foreground">Booking volume</h3>
             <p className="text-[12px] text-muted-foreground font-medium">last 7 months</p>
@@ -111,7 +111,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Pending Approvals */}
-        <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
+        <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-extrabold text-lg text-foreground">Pending approvals</h3>
             <span className="w-6 h-6 rounded-full bg-[#F5E6D8] text-[#C56A30] font-extrabold text-xs flex items-center justify-center">
@@ -160,7 +160,7 @@ export default function AdminDashboard() {
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Top Hostels */}
-        <div className="lg:col-span-2 bg-white dark:bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-extrabold text-lg text-foreground">Top hostels</h3>
             <span className="text-[12px] text-muted-foreground font-medium">by occupancy</span>
@@ -233,7 +233,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Recent Signups */}
-        <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
+        <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
           <h3 className="font-extrabold text-lg text-foreground mb-5">Recent signups</h3>
 
           <div className="space-y-4">

@@ -3,18 +3,20 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 import { useBookings } from "@/contexts/BookingContext";
+import { useAuth } from "@/contexts/AuthContext";
 
 export default function PaymentDetails() {
   const location = useLocation();
   const navigate = useNavigate();
   const { addBooking } = useBookings();
+  const { user } = useAuth();
   const [selectedMethod, setSelectedMethod] = useState<'momo' | 'card'>('momo');
   const [isProcessing, setIsProcessing] = useState(false);
 
   const [momoDetails, setMomoDetails] = useState({
-    number: "+233 24 123 4567",
+    number: "",
     network: "MTN",
-    name: "Sarah Adjei"
+    name: user?.name ?? ""
   });
 
   const summary = location.state || {
@@ -42,7 +44,7 @@ export default function PaymentDetails() {
     setTimeout(() => {
       // 1. Add booking to global context
       addBooking({
-        studentName: "Sarah Adjei", // Mock current user
+        studentName: user?.name ?? "",
         hostelName: summary.hostelName,
         roomLabel: summary.roomLabel,
         roomNumber: "Rm 402B",
@@ -162,7 +164,7 @@ export default function PaymentDetails() {
                   </div>
                   <div>
                     <h4 className="font-bold text-[#3D261B] text-[15px]">Mobile Money</h4>
-                    <p className="text-xs font-medium text-[#8C8279]">MTN · +233 24 •••• 4567</p>
+                    <p className="text-xs font-medium text-[#8C8279]">{momoDetails.network}{momoDetails.number ? ` · ${momoDetails.number}` : ""}</p>
                   </div>
                 </div>
                 <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ${selectedMethod === 'momo' ? 'border-[#C56A30] bg-[#C56A30]' : 'border-[#D6CEC4]'}`}>
@@ -203,6 +205,7 @@ export default function PaymentDetails() {
                     <label className="text-xs font-bold text-[#463C38] mb-1.5 block">Mobile Money number</label>
                     <Input 
                       value={momoDetails.number}
+                      placeholder="e.g. 024 123 4567"
                       onChange={(e) => setMomoDetails({...momoDetails, number: e.target.value})}
                       className="h-11 bg-[#F8F6F3] border-[#E5E0D8] text-[15px] font-medium text-[#463C38]" 
                     />

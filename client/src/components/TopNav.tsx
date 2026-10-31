@@ -4,10 +4,13 @@ import { Link } from "react-router-dom";
 // import { TygerAvatar } from 'tyger-avatar';
 import { Moon } from "lucide-react";
 import { useTheme } from "./theme-provider";
+import { useAuth } from "@/contexts/AuthContext";
+import { getInitials } from "@/lib/utils";
 
 export default function TopNav() {
   const userAvatar = localStorage.getItem("userAvatar");
   const { theme, setTheme } = useTheme();
+  const { user } = useAuth();
 
   return (
     <header className="flex items-center justify-between px-4 h-20 w-full fixed top-0 left-0 z-50 bg-white/90 dark:bg-black/90 backdrop-blur-xl border-b border-border/40 transition-colors shadow-sm">
@@ -28,7 +31,7 @@ export default function TopNav() {
             {userAvatar?.startsWith("http") ? (
                <img src={userAvatar} alt="Profile" className="w-full h-full object-cover" />
             ) : (
-               <span className="text-[#6c5e57] font-bold text-[14px]">SA</span>
+               <span className="text-[#6c5e57] font-bold text-[14px]">{getInitials(user?.name || user?.email)}</span>
             )}
           </div>
         </Link>

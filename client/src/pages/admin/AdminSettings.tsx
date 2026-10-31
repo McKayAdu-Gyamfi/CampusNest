@@ -8,7 +8,7 @@ export default function AdminSettings() {
     <div className="space-y-6 w-full">
       <h1 className="text-[28px] font-extrabold tracking-tight text-foreground pb-6 mb-6 border-b border-solid border-border/80">Platform settings</h1>
 
-      <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-6 shadow-sm space-y-6">
+      <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm space-y-6">
         <div>
           <h2 className="text-sm font-extrabold uppercase tracking-wider text-muted-foreground mb-4">General Configuration</h2>
           

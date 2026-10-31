@@ -3,7 +3,9 @@ import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useBookings } from "@/contexts/BookingContext";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
-import { ALL_HOSTELS } from "@/data/hostels";
+import { useHostels } from "@/contexts/HostelsContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { getInitials } from "@/lib/utils";
 
 export interface HostelDetailsOverlayProps {
   selectedHostel: any;
@@ -25,6 +27,8 @@ const AMENITY_ICONS: Record<string, any> = {
 
 export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel, savedHostels = [], onSave }: HostelDetailsOverlayProps) {
   const navigate = useNavigate();
+  const { allHostels } = useHostels();
+  const { user } = useAuth();
   const [selectedRoom, setSelectedRoom] = useState<number | null>(1);
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
@@ -78,7 +82,7 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
   const extraGalleryCount = Math.max((hostel.gallery?.length || 0) - 3, 0);
 
   const searchSuggestions = searchQuery.trim().length > 0
-    ? ALL_HOSTELS.filter((h: any) =>
+    ? allHostels.filter((h: any) =>
         h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         h.location.toLowerCase().includes(searchQuery.toLowerCase())
       ).slice(0, 6)
@@ -337,7 +341,7 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
 
               <div className="mb-8">
                 <h3 className="text-xs font-extrabold tracking-wider text-muted-foreground uppercase mb-3">Choose a room</h3>
-                <div className="space-y-3">{roomTypes.map((type) => renderRoomOption(type, false, false))}</div>
+                <div className="space-y-3">{roomTypes.map((type) => renderRoomOption(type))}</div>
               </div>
 
               <div className="mb-8">
@@ -441,7 +445,7 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
             </div>
             <NotificationsDropdown />
             <Link to="/profile" className="w-[52px] h-[52px] bg-[#E5D0BA] rounded-full flex items-center justify-center font-bold text-[#6c5e57] shadow-sm text-lg cursor-pointer hover:opacity-90 shrink-0">
-              SA
+              {getInitials(user?.name || user?.email)}
             </Link>
           </div>
 

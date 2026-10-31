@@ -42,7 +42,7 @@ export default function AdminSchools() {
                 className={`p-4 rounded-[20px] transition-all cursor-pointer border flex items-center space-x-4 ${
                   isSelected
                     ? "bg-[#FAF0E6] border-[#C56A30]/40 shadow-sm"
-                    : "bg-white dark:bg-card border-border/40 hover:bg-accent/40"
+                    : "bg-card border-border/40 hover:bg-accent/40"
                 }`}
               >
                 <div className={`w-11 h-11 rounded-2xl flex items-center justify-center shrink-0 ${
@@ -64,7 +64,7 @@ export default function AdminSchools() {
         {/* Right Column: Selected School Details & Map */}
         <div className="lg:col-span-2 space-y-6 lg:pl-6">
           {/* Map Header Box */}
-          <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-6 shadow-sm space-y-4">
+          <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm space-y-4">
             <div>
               <h2 className="text-[22px] font-extrabold text-foreground leading-tight">{selectedSchool}</h2>
               <p className="text-[13px] text-muted-foreground font-medium flex items-center space-x-1 mt-0.5">
@@ -100,7 +100,7 @@ export default function AdminSchools() {
 
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               {schoolHostels.map((h) => (
-                <div key={h.name} className="p-4 bg-white dark:bg-card border border-border/40 rounded-[20px] shadow-sm flex items-center justify-between gap-3">
+                <div key={h.name} className="p-4 bg-card border border-border/40 rounded-[20px] shadow-sm flex items-center justify-between gap-3">
                   <div className="flex items-center space-x-3">
                     <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#D2BDA7] to-[#B09A84] shrink-0 opacity-80" 
                       style={{

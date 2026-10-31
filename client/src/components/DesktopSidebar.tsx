@@ -4,14 +4,15 @@ import { Home, Compass, Bookmark, BedDouble, User, LogOut, Moon } from "lucide-r
 // import { TygerAvatar } from 'tyger-avatar';
 import { useTheme } from "./theme-provider";
 import { useAuth } from "@/contexts/AuthContext";
+import { getInitials } from "@/lib/utils";
 
 export default function DesktopSidebar() {
   const { pathname } = useLocation();
   const userAvatar = localStorage.getItem("userAvatar");
-  const userName = localStorage.getItem("userName") || "Sarah Adjei";
-  const initials = userName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
   const { theme, setTheme } = useTheme();
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const userName = user?.name || user?.email || "";
+  const initials = getInitials(userName);
 
   // Define navigation items
   const navItems = [
@@ -23,7 +24,7 @@ export default function DesktopSidebar() {
   ];
 
   return (
-    <aside className="hidden lg:flex w-[88px] hover:w-[260px] flex-col h-screen fixed top-0 left-0 bg-[#F3ECDE] dark:bg-sidebar border-r border-border/40 z-50 py-8 transition-[width] duration-300 group overflow-x-hidden shadow-[4px_0_24px_rgba(0,0,0,0.02)] hover:shadow-[12px_0_40px_rgba(0,0,0,0.06)]">
+    <aside className="hidden lg:flex w-[88px] hover:w-[260px] flex-col h-screen fixed top-0 left-0 bg-[#F3ECDE] dark:bg-sidebar border-r border-border/40 z-50 hover:z-[120] focus-within:z-[120] py-8 transition-[width] duration-300 group overflow-x-hidden shadow-[4px_0_24px_rgba(0,0,0,0.02)] hover:shadow-[12px_0_40px_rgba(0,0,0,0.06)]">
       {/* Top Logo */}
       <div className="px-5 mb-12 min-w-[260px]">
         <Logo 

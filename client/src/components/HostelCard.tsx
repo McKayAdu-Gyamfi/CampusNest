@@ -20,7 +20,7 @@ export default function HostelCard({
   return (
     <div 
       onClick={onClick}
-      className={`w-full bg-white dark:bg-card border border-border/40 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col group relative ${onClick ? 'cursor-pointer' : ''} ${className}`}
+      className={`w-full bg-card border border-border/40 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col group relative ${onClick ? 'cursor-pointer' : ''} ${className}`}
     >
       <div className="relative h-[190px] w-full shrink-0 overflow-hidden bg-muted">
         <img 
@@ -56,7 +56,7 @@ export default function HostelCard({
         )}
       </div>
 
-      <div className="p-5 flex-1 flex flex-col justify-between bg-white dark:bg-card">
+      <div className="p-5 flex-1 flex flex-col justify-between bg-card">
         <div>
           <h4 className="font-extrabold text-foreground text-[18px] truncate mb-0.5 group-hover:text-[#C56A30] transition-colors">
             {hostel.name}

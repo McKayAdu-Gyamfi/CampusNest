@@ -14,7 +14,7 @@ export default function BottomNav() {
   ];
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-[72px] px-2 bg-white dark:bg-card border-t border-border/40 shadow-lg transition-colors">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around h-[72px] px-2 bg-card border-t border-border/40 shadow-lg transition-colors">
       {navItems.map((item) => {
         const Icon = item.icon;
         const isActive = currentPath === item.path;

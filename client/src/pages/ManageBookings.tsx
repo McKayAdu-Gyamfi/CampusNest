@@ -103,7 +103,7 @@ export default function ManageBookings() {
             ) : (
             <div className="space-y-5">
               {bookings.map((booking) => (
-                <div key={booking.id} className="bg-white dark:bg-card rounded-2xl shadow-sm p-4 flex flex-col md:flex-row gap-5 relative">
+                <div key={booking.id} className="bg-card rounded-2xl shadow-sm p-4 flex flex-col md:flex-row gap-5 relative">
                   
                   {/* Thumbnail Placeholder */}
                   <div className="w-full md:w-[240px] h-[160px] md:h-auto rounded-xl shrink-0 relative overflow-hidden bg-[repeating-linear-gradient(45deg,#E5D0BA,#E5D0BA_15px,#F1E8DC_15px,#F1E8DC_30px)] flex items-center justify-center border border-[#E5D0BA]/50">
@@ -164,13 +164,13 @@ export default function ManageBookings() {
                         <button className="w-full bg-[#A84A1A] hover:bg-[#8F3E15] text-white py-2.5 rounded-full font-bold text-[13px] transition-colors shadow-sm">
                           View booking
                         </button>
-                        <button className="w-full bg-white dark:bg-card border border-[#C8B09A] dark:border-border/40 text-[#A84A1A] hover:bg-[#F8F6F3] dark:hover:bg-muted py-2.5 rounded-full font-bold text-[13px] transition-colors flex items-center justify-center space-x-1.5">
+                        <button className="w-full bg-card border border-[#C8B09A] dark:border-border/40 text-[#A84A1A] hover:bg-[#F8F6F3] dark:hover:bg-muted py-2.5 rounded-full font-bold text-[13px] transition-colors flex items-center justify-center space-x-1.5">
                           <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
                           <span>Directions</span>
                         </button>
                       </>
                     ) : booking.status === "CANCELLED" ? (
-                      <button className="w-full bg-white dark:bg-card border border-[#C8B09A] dark:border-border/40 text-[#A84A1A] hover:bg-[#F8F6F3] dark:hover:bg-muted py-2.5 rounded-full font-bold text-[13px] transition-colors">
+                      <button className="w-full bg-card border border-[#C8B09A] dark:border-border/40 text-[#A84A1A] hover:bg-[#F8F6F3] dark:hover:bg-muted py-2.5 rounded-full font-bold text-[13px] transition-colors">
                         View details
                       </button>
                     ) : (
@@ -178,7 +178,7 @@ export default function ManageBookings() {
                         <button className="w-full bg-[#A84A1A] hover:bg-[#8F3E15] text-white py-2.5 rounded-full font-bold text-[13px] transition-colors shadow-sm">
                           Complete payment
                         </button>
-                        <button className="w-full bg-white dark:bg-card border border-[#C8B09A] dark:border-border/40 text-[#A84A1A] hover:bg-[#F8F6F3] dark:hover:bg-muted py-2.5 rounded-full font-bold text-[13px] transition-colors">
+                        <button className="w-full bg-card border border-[#C8B09A] dark:border-border/40 text-[#A84A1A] hover:bg-[#F8F6F3] dark:hover:bg-muted py-2.5 rounded-full font-bold text-[13px] transition-colors">
                           View details
                         </button>
                         {booking.expiresIn && (

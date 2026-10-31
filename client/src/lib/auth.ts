@@ -6,6 +6,9 @@ export interface BackendUser {
   name: string;
   user_type: "STUDENT" | "HOSTEL_MANAGER" | "ADMIN";
   profile_complete: boolean;
+  student_id?: string;
+  course?: string;
+  emailVerified?: boolean;
 }
 
 // Generic sign-up. The backend's databaseHooks always assigns STUDENT here
