@@ -1,5 +1,8 @@
 import { Heart, BedDouble, Star, Settings, ShieldCheck, Bell, ChevronRight, LogOut } from "lucide-react";
+import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { apiFetch } from "@/lib/apiClient";
+import { getInitials } from "@/lib/utils";
 import TopNav from "@/components/TopNav";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import { useBookings } from "@/contexts/BookingContext";
@@ -7,13 +10,36 @@ import { useAuth } from "@/contexts/AuthContext";
 // import { TygerAvatar } from 'tyger-avatar';
 
 export default function Profile() {
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
   const userAvatar = localStorage.getItem("userAvatar");
-  const userName = localStorage.getItem("userName") || "Sarah Adjei";
-  const userUniversity = localStorage.getItem("userUniversity") || "Ashesi";
-  const userLevel = localStorage.getItem("userLevel") || "300";
-  const initials = userName.split(" ").map((n) => n[0]).slice(0, 2).join("").toUpperCase();
+  const userName = user?.name || user?.email || "";
+  const initials = getInitials(userName);
   const { bookings } = useBookings();
+
+  // Saved hostels live in localStorage (see Home/Explore/Saved).
+  const savedCount = (() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem("saved_hostels") || "[]");
+      return Array.isArray(saved) ? saved.length : 0;
+    } catch {
+      return 0;
+    }
+  })();
+
+  // The reviews list has no "mine" filter, so count the ones written under
+  // this account's email. The bookings endpoint is already scoped to the
+  // signed-in student.
+  const [bookingCount, setBookingCount] = useState<number | null>(null);
+  const [reviewCount, setReviewCount] = useState<number | null>(null);
+  useEffect(() => {
+    if (!user?.email) return;
+    apiFetch<unknown[]>("/bookings")
+      .then((rows) => setBookingCount(rows.length))
+      .catch(() => setBookingCount(null));
+    apiFetch<{ USERS?: { email: string } | null }[]>("/reviews")
+      .then((rows) => setReviewCount(rows.filter((r) => r.USERS?.email === user.email).length))
+      .catch(() => setReviewCount(null));
+  }, [user?.email]);
   const currentBooking = bookings.length > 0 ? bookings[0] : null;
 
   return (
@@ -57,14 +83,23 @@ export default function Profile() {
             </div>
             <div>
               <h2 className="text-[26px] lg:text-[28px] font-extrabold text-white leading-tight mb-1">{userName}</h2>
-              <p className="text-[13px] text-white/80 font-medium mb-4">sarah.adjei@ashesi.edu.gh</p>
+              <p className="text-[13px] text-white/80 font-medium mb-4">{user?.email}</p>
               <div className="flex flex-wrap justify-center md:justify-start gap-2">
-                <span className="bg-white/20 backdrop-blur-md text-white font-extrabold text-[12px] px-3.5 py-1.5 rounded-full">
-                  Level {userLevel} · {userUniversity}
-                </span>
-                <span className="bg-[#C56A30] text-white font-extrabold text-[12px] px-3.5 py-1.5 rounded-full">
-                  Verified
-                </span>
+                {user?.course && (
+                  <span className="bg-white/20 backdrop-blur-md text-white font-extrabold text-[12px] px-3.5 py-1.5 rounded-full">
+                    {user.course}
+                  </span>
+                )}
+                {user?.studentId && (
+                  <span className="bg-white/20 backdrop-blur-md text-white font-extrabold text-[12px] px-3.5 py-1.5 rounded-full">
+                    ID {user.studentId}
+                  </span>
+                )}
+                {user?.emailVerified && (
+                  <span className="bg-[#C56A30] text-white font-extrabold text-[12px] px-3.5 py-1.5 rounded-full">
+                    Verified
+                  </span>
+                )}
               </div>
             </div>
           </div>
@@ -83,7 +118,7 @@ export default function Profile() {
             <h3 className="text-[12px] font-extrabold text-muted-foreground uppercase tracking-widest mb-3">
               Current booking
             </h3>
-            <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
+            <div className="bg-card border border-border/40 rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row items-start sm:items-center justify-between gap-5">
               <div className="flex items-center space-x-4 flex-1">
                 <img 
                   src={currentBooking.image || "https://images.unsplash.com/photo-1555854877-bab0e564b8d5?auto=format&fit=crop&w=400&q=80"} 
@@ -119,33 +154,33 @@ export default function Profile() {
 
         {/* Stats Row */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-          <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-[120px]">
+          <div className="bg-card border border-border/40 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-[120px]">
             <Heart className="w-5 h-5 text-[#C56A30]" />
             <div>
-              <span className="text-[26px] font-extrabold text-foreground block leading-none mb-1">7</span>
+              <span className="text-[26px] font-extrabold text-foreground block leading-none mb-1">{savedCount}</span>
               <span className="text-[13px] font-medium text-muted-foreground">Saved hostels</span>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-[120px]">
+          <div className="bg-card border border-border/40 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-[120px]">
             <BedDouble className="w-5 h-5 text-[#C56A30]" />
             <div>
-              <span className="text-[26px] font-extrabold text-foreground block leading-none mb-1">{bookings.length}</span>
+              <span className="text-[26px] font-extrabold text-foreground block leading-none mb-1">{bookingCount ?? bookings.length}</span>
               <span className="text-[13px] font-medium text-muted-foreground">Past bookings</span>
             </div>
           </div>
 
-          <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-[120px]">
+          <div className="bg-card border border-border/40 rounded-2xl p-5 shadow-sm flex flex-col justify-between h-[120px]">
             <Star className="w-5 h-5 text-[#C56A30]" />
             <div>
-              <span className="text-[26px] font-extrabold text-foreground block leading-none mb-1">3</span>
+              <span className="text-[26px] font-extrabold text-foreground block leading-none mb-1">{reviewCount ?? 0}</span>
               <span className="text-[13px] font-medium text-muted-foreground">Reviews written</span>
             </div>
           </div>
         </div>
 
         {/* Settings Links */}
-        <div className="bg-white dark:bg-card border border-border/40 rounded-2xl shadow-sm overflow-hidden divide-y divide-border/40">
+        <div className="bg-card border border-border/40 rounded-2xl shadow-sm overflow-hidden divide-y divide-border/40">
           <Link to="/settings" className="flex items-center justify-between p-5 hover:bg-accent/40 transition-colors cursor-pointer group">
             <div className="flex items-center space-x-4">
               <Settings className="w-5 h-5 text-[#8C5B4F]" />

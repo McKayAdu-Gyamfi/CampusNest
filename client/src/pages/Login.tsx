@@ -6,6 +6,8 @@ import { Input } from "@/components/ui/input";
 import { signUpStudent, signInEmail, registerManager } from "@/lib/auth";
 import { ApiError } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
+import { getInitials } from "@/lib/utils";
+import { useComingSoon } from "@/contexts/ComingSoonContext";
 
 // import { TygerAvatar } from 'tyger-avatar';
 
@@ -34,6 +36,7 @@ export default function Login() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
   const { refetch } = useAuth();
+  const { showComingSoon } = useComingSoon();
 
   const [activeSlide, setActiveSlide] = useState(0);
   const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signin');
@@ -304,7 +307,7 @@ export default function Login() {
               className="w-28 h-28 rounded-full border-4 border-[#C56A30] flex items-center justify-center text-white font-extrabold text-4xl shadow-md transition-colors"
               style={{ backgroundColor: selectedAvatar || "#A3735D" }}
             >
-              SA
+              {getInitials(fullName)}
             </div>
           </div>
 
@@ -580,7 +583,7 @@ export default function Login() {
               </div>
               {authMode === 'signin' && (
                 <div className="flex justify-end pt-1.5 pb-0.5">
-                  <button type="button" className="text-[12px] font-semibold text-canyon hover:underline cursor-pointer">
+                  <button type="button" onClick={() => showComingSoon("Password reset")} className="text-[12px] font-semibold text-canyon hover:underline cursor-pointer">
                     Forgot password?
                   </button>
                 </div>
@@ -613,7 +616,8 @@ export default function Login() {
           {/* SSO: Google for managers, Microsoft for students */}
           {role === "manager" ? (
             <button
-              onClick={handleLoginClick}
+              type="button"
+              onClick={() => showComingSoon("Google sign-in")}
               className="w-full bg-white border border-[#E5E0D8] shadow-sm hover:shadow-md hover:bg-[#F8F6F3] text-[#463C38] rounded-full h-11 flex items-center justify-center space-x-3 font-semibold text-[14px] transition-all cursor-pointer transform hover:-translate-y-0.5"
             >
               <svg className="w-4 h-4 mr-1" viewBox="0 0 18 18" xmlns="http://www.w3.org/2000/svg">
@@ -626,7 +630,8 @@ export default function Login() {
             </button>
           ) : (
             <button
-              onClick={handleLoginClick}
+              type="button"
+              onClick={() => showComingSoon("Microsoft sign-in")}
               className="w-full bg-white border border-[#E5E0D8] shadow-sm hover:shadow-md hover:bg-[#F8F6F3] text-[#463C38] rounded-full h-11 flex items-center justify-center space-x-3 font-semibold text-[14px] transition-all cursor-pointer transform hover:-translate-y-0.5"
             >
               <div className="grid grid-cols-2 gap-0.5 w-4 h-4 mr-1">
@@ -662,7 +667,7 @@ export default function Login() {
           {authMode === 'signup' && (
             <p className="text-center text-[11px] text-[#8C8279] mt-3">
               By continuing you agree to our{" "}
-              <a href="#" className="font-semibold text-canyon hover:underline">Terms & Privacy Policy</a>.
+              <button type="button" onClick={() => showComingSoon("The Terms & Privacy Policy page")} className="font-semibold text-canyon hover:underline cursor-pointer">Terms & Privacy Policy</button>.
             </p>
           )}
         </div>

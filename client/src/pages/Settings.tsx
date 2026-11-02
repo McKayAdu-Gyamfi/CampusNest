@@ -1,11 +1,15 @@
 import { ChevronLeft, Bell, Compass, Moon } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useState } from "react";
+import { useAuth } from "@/contexts/AuthContext";
+import { useComingSoon } from "@/contexts/ComingSoonContext";
 
 export default function SettingsPage() {
   const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(true);
-  const [alerts, setAlerts] = useState(true);
+  const { user } = useAuth();
+  const { showComingSoon } = useComingSoon();
+  const [notifications] = useState(true);
+  const [alerts] = useState(true);
   const [darkMode, setDarkMode] = useState(false);
 
   return (
@@ -29,7 +33,8 @@ export default function SettingsPage() {
               <label className="text-[13px] font-bold text-foreground">Full name</label>
               <input 
                 type="text" 
-                defaultValue="Sarah Adjei"
+                key={user?.name}
+                defaultValue={user?.name}
                 className="w-full h-[52px] bg-white border border-border/60 rounded-xl px-4 text-[15px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-[#C56A30] shadow-sm transition-all"
               />
             </div>
@@ -37,7 +42,7 @@ export default function SettingsPage() {
               <label className="text-[13px] font-bold text-foreground">Phone</label>
               <input 
                 type="text" 
-                defaultValue="+233 24 123 4567"
+                placeholder="e.g. 024 123 4567"
                 className="w-full h-[52px] bg-white border border-border/60 rounded-xl px-4 text-[15px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-[#C56A30] shadow-sm transition-all"
               />
             </div>
@@ -45,7 +50,8 @@ export default function SettingsPage() {
               <label className="text-[13px] font-bold text-foreground">Email</label>
               <input 
                 type="email" 
-                defaultValue="sarah.adjei@ashesi.edu.gh"
+                key={user?.email}
+                defaultValue={user?.email}
                 className="w-full h-[52px] bg-white border border-border/60 rounded-xl px-4 text-[15px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-[#C56A30] shadow-sm transition-all"
               />
             </div>
@@ -75,7 +81,7 @@ export default function SettingsPage() {
               </div>
               {/* Toggle Switch */}
               <button 
-                onClick={() => setNotifications(!notifications)}
+                onClick={() => showComingSoon("Notification settings")}
                 className={`w-12 h-[26px] rounded-full relative transition-colors cursor-pointer ${notifications ? 'bg-[#C56A30]' : 'bg-[#D6CFC8]'}`}
               >
                 <div className={`absolute top-1 w-[18px] h-[18px] bg-white rounded-full transition-transform ${notifications ? 'left-[26px]' : 'left-1'}`} />
@@ -91,7 +97,7 @@ export default function SettingsPage() {
                 </div>
               </div>
               <button 
-                onClick={() => setAlerts(!alerts)}
+                onClick={() => showComingSoon("Hostel alerts")}
                 className={`w-12 h-[26px] rounded-full relative transition-colors cursor-pointer ${alerts ? 'bg-[#C56A30]' : 'bg-[#D6CFC8]'}`}
               >
                 <div className={`absolute top-1 w-[18px] h-[18px] bg-white rounded-full transition-transform ${alerts ? 'left-[26px]' : 'left-1'}`} />
@@ -119,7 +125,7 @@ export default function SettingsPage() {
 
         {/* Buttons */}
         <div className="flex items-center space-x-4 pt-4">
-          <button className="h-[48px] px-8 bg-[#C56A30] hover:bg-[#b05b26] text-white font-bold rounded-full transition-colors shadow-sm text-[15px] cursor-pointer">
+          <button onClick={() => showComingSoon("Saving account changes")} className="h-[48px] px-8 bg-[#C56A30] hover:bg-[#b05b26] text-white font-bold rounded-full transition-colors shadow-sm text-[15px] cursor-pointer">
             Save changes
           </button>
           <button className="h-[48px] px-8 bg-transparent border border-border/80 text-foreground font-bold rounded-full transition-colors text-[15px] hover:bg-accent/50 cursor-pointer">

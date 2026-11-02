@@ -6,6 +6,8 @@ import RoleProtectedRoute from "./components/RoleProtectedRoute";
 import { ThemeProvider } from "./components/theme-provider";
 import { BookingProvider } from "./contexts/BookingContext";
 import { AuthProvider } from "./contexts/AuthContext";
+import { HostelsProvider } from "./contexts/HostelsContext";
+import { ComingSoonProvider } from "./contexts/ComingSoonContext";
 import { ToastProvider } from "./components/ui/toaster";
 
 const Home = React.lazy(() => import("./pages/Home"));
@@ -46,7 +48,9 @@ export default function App() {
   return (
     <ThemeProvider defaultTheme="light" storageKey="vite-ui-theme">
       <ToastProvider>
+        <ComingSoonProvider>
         <AuthProvider>
+        <HostelsProvider>
         <BookingProvider>
         <Router>
         <Suspense fallback={<ScreenLoader />}>
@@ -94,7 +98,9 @@ export default function App() {
       </Suspense>
       </Router>
         </BookingProvider>
+        </HostelsProvider>
         </AuthProvider>
+        </ComingSoonProvider>
       </ToastProvider>
     </ThemeProvider>
   );

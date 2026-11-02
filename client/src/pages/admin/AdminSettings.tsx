@@ -51,7 +51,7 @@ export default function AdminSettings() {
         <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-sm font-bold text-red-700">{error}</div>
       )}
 
-      <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-6 shadow-sm space-y-6">
+      <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm space-y-6">
         <div>
           <h2 className="text-sm font-extrabold uppercase tracking-wider text-muted-foreground mb-4">General Configuration</h2>
 

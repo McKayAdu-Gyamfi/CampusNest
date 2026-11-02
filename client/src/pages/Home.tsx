@@ -7,7 +7,9 @@ import NotificationsDropdown from "@/components/NotificationsDropdown";
 import HostelCard from "@/components/HostelCard";
 import HostelDetailsOverlay from "@/components/HostelDetailsOverlay";
 import { useState, useEffect } from "react";
-import { MOST_POPULAR, NEARBY_PLACES, ALL_HOSTELS } from "../data/hostels";
+import { useHostels } from "@/contexts/HostelsContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { getInitials } from "@/lib/utils";
 import { useToast } from "@/components/ui/toaster";
 
 const getBadgeStyle = (availability: string) => {
@@ -20,11 +22,11 @@ const getBadgeStyle = (availability: string) => {
 
 export default function Home() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const location = useLocation();
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [selectedHostel, setSelectedHostel] = useState<any>(() => {
-    return location.state?.restoreHostel ? ALL_HOSTELS.find(h => h.id === location.state.restoreHostel) || null : null;
-  });
+  const { allHostels, mostPopular, nearbyPlaces, isLoading, error } = useHostels();
+  const [selectedHostel, setSelectedHostel] = useState<any>(null);
   const [savedHostels, setSavedHostels] = useState<string[]>(() => {
     const saved = localStorage.getItem("saved_hostels");
     return saved ? JSON.parse(saved) : [];
@@ -32,10 +34,10 @@ export default function Home() {
 
   useEffect(() => {
     if (location.state?.restoreHostel) {
-      const hostel = ALL_HOSTELS.find(h => h.id === location.state.restoreHostel);
+      const hostel = allHostels.find(h => h.id === location.state.restoreHostel);
       if (hostel) setSelectedHostel(hostel);
     }
-  }, [location.state]);
+  }, [location.state, allHostels]);
 
   const handleSave = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -65,13 +67,13 @@ export default function Home() {
           <input 
             type="text" 
             placeholder="Search hostels near Berekuso..." 
-            className="w-full h-[52px] pl-12 pr-4 bg-white/60 border border-border/50 rounded-full text-[15px] font-medium outline-none focus:ring-2 focus:ring-[#C56A30]/30 transition-all shadow-sm backdrop-blur-sm"
+            className="w-full h-[52px] pl-12 pr-4 bg-card/60 border border-border/50 rounded-full text-[15px] font-medium outline-none focus:ring-2 focus:ring-[#C56A30]/30 transition-all shadow-sm backdrop-blur-sm"
           />
         </div>
         <div className="flex items-center space-x-4">
           <NotificationsDropdown />
           <Link to="/profile" className="w-[52px] h-[52px] bg-[#E5D0BA] rounded-full flex items-center justify-center font-bold text-[#6c5e57] shadow-sm text-lg cursor-pointer hover:opacity-90">
-            SA
+            {getInitials(user?.name || user?.email)}
           </Link>
         </div>
       </header>
@@ -128,9 +130,15 @@ export default function Home() {
           <Link to="/explore" className="text-sm font-bold text-[#C56A30] hover:underline cursor-pointer">View all</Link>
         </div>
         
+        {(isLoading || error || allHostels.length === 0) && (
+          <p className="text-muted-foreground text-sm py-4">
+            {isLoading ? "Loading hostels..." : error ?? "No hostels available yet."}
+          </p>
+        )}
+
         {/* Mobile Vertical Stack */}
         <div className="lg:hidden flex flex-col space-y-4">
-          {MOST_POPULAR.map((hostel) => (
+          {mostPopular.map((hostel) => (
             <HostelCard 
               key={hostel.id}
               hostel={hostel} 
@@ -146,7 +154,7 @@ export default function Home() {
         <div className="hidden lg:block">
           <ScrollArea className="w-full whitespace-nowrap">
             <div className="flex w-max space-x-4 pb-4 pt-1">
-              {MOST_POPULAR.map((hostel) => (
+              {mostPopular.map((hostel) => (
                 <div key={hostel.id} className="w-[300px] shrink-0 block outline-none cursor-pointer">
                   <HostelCard 
                     hostel={hostel} 
@@ -168,7 +176,7 @@ export default function Home() {
         <h3 className="text-xl lg:text-[24px] font-extrabold tracking-tight text-foreground mb-4 lg:mb-6">Recommended for you</h3>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 lg:gap-6">
           
-          {NEARBY_PLACES.map((hostel) => (
+          {nearbyPlaces.map((hostel) => (
             <div 
               key={hostel.id} 
               onClick={() => setSelectedHostel(hostel)}

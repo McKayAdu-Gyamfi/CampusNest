@@ -77,7 +77,7 @@ export default function NotificationsDropdown() {
       {/* Bell Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)} 
-        className="w-10 h-10 lg:w-[52px] lg:h-[52px] bg-white dark:bg-card border border-border/50 rounded-full flex items-center justify-center relative shadow-sm hover:bg-accent transition-colors cursor-pointer"
+        className="w-10 h-10 lg:w-[52px] lg:h-[52px] bg-card border border-border/50 rounded-full flex items-center justify-center relative shadow-sm hover:bg-accent transition-colors cursor-pointer"
       >
         <Bell className="w-5 h-5 text-[#5E5B58]" />
         {unreadCount > 0 && (
@@ -87,9 +87,9 @@ export default function NotificationsDropdown() {
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-[-40px] sm:right-0 mt-3 w-[320px] sm:w-[360px] bg-white dark:bg-card border border-border/50 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col origin-top-right animate-in fade-in zoom-in-95 duration-200">
+        <div className="absolute right-[-40px] sm:right-0 mt-3 w-[320px] sm:w-[360px] bg-card border border-border/50 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col origin-top-right animate-in fade-in zoom-in-95 duration-200">
           
-          <div className="p-4 border-b border-border/40 flex items-center justify-between bg-white dark:bg-card">
+          <div className="p-4 border-b border-border/40 flex items-center justify-between bg-card">
             <h3 className="font-extrabold text-lg text-foreground">Notifications</h3>
             {unreadCount > 0 && (
               <button onClick={markAllAsRead} className="text-xs font-extrabold text-[#C56A30] hover:underline transition-colors mt-1 cursor-pointer">
@@ -99,7 +99,7 @@ export default function NotificationsDropdown() {
           </div>
 
           <div className="px-4 py-3 bg-[#F8F6F3] dark:bg-muted/20 border-b border-border/40">
-            <div className="flex bg-white dark:bg-card p-1 rounded-xl border border-border/40">
+            <div className="flex bg-card p-1 rounded-xl border border-border/40">
               {tabs.map((tab) => (
                 <button 
                   key={tab}

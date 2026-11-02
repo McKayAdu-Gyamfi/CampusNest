@@ -83,7 +83,7 @@ export default function AdminUsers() {
             placeholder="Search name, email..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full h-11 pl-11 pr-4 bg-white dark:bg-card border border-border/50 rounded-full text-xs font-medium outline-none focus:ring-2 focus:ring-[#C56A30] shadow-sm transition-all"
+            className="w-full h-11 pl-11 pr-4 bg-card border border-border/50 rounded-full text-xs font-medium outline-none focus:ring-2 focus:ring-[#C56A30] shadow-sm transition-all"
           />
         </div>
       </div>
@@ -128,7 +128,7 @@ export default function AdminUsers() {
       </div>
 
       {/* Users Table Card */}
-      <div className="bg-white dark:bg-card border border-border/40 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-card border border-border/40 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>

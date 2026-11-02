@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ChevronLeft, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
 // import { TygerAvatar } from 'tyger-avatar';
 
 const PREFERENCES = [
@@ -20,6 +21,7 @@ const PREFERENCES = [
 
 export default function EditProfile() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [userAvatar] = useState<string>(localStorage.getItem("userAvatar") || "TrFelix");
   const [selectedPrefs, setSelectedPrefs] = useState<string[]>([
     "Air-Conditioned", 
@@ -86,7 +88,8 @@ export default function EditProfile() {
             <label className="text-[11px] font-extrabold uppercase tracking-widest text-muted-foreground ml-1">Full Name</label>
             <input 
               type="text" 
-              defaultValue="Sarah Adjei"
+              key={user?.name}
+              defaultValue={user?.name}
               className="w-full h-12 bg-card border border-border/60 rounded-lg px-4 font-semibold text-[13px] focus:outline-none focus:ring-1 ring-primary/50 transition-all shadow-sm"
             />
           </div>

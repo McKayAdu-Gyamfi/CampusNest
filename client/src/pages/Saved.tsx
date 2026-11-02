@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import TopNav from "@/components/TopNav";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
-import { ALL_HOSTELS } from "../data/hostels";
+import { useHostels } from "@/contexts/HostelsContext";
 import { Search, SlidersHorizontal, Bookmark, MapPin, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import FilterModal from "@/components/FilterModal";
@@ -13,16 +13,15 @@ export default function Saved() {
   const { toast } = useToast();
   const location = useLocation();
   const [savedHostelIds, setSavedHostelIds] = useState<string[]>([]);
-  const [selectedHostel, setSelectedHostel] = useState<any>(() => {
-    return location.state?.restoreHostel ? ALL_HOSTELS.find(h => h.id === location.state.restoreHostel) || null : null;
-  });
+  const { allHostels } = useHostels();
+  const [selectedHostel, setSelectedHostel] = useState<any>(null);
 
   useEffect(() => {
     if (location.state?.restoreHostel) {
-      const hostel = ALL_HOSTELS.find(h => h.id === location.state.restoreHostel);
+      const hostel = allHostels.find(h => h.id === location.state.restoreHostel);
       if (hostel) setSelectedHostel(hostel);
     }
-  }, [location.state]);
+  }, [location.state, allHostels]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<{ distance: number; amenities: string[], priceRange: [number, number] }>({ 
@@ -46,7 +45,7 @@ export default function Saved() {
     toast("Removed from saved", "info");
   };
 
-  const savedHostels = ALL_HOSTELS.filter(h => savedHostelIds.includes(h.id));
+  const savedHostels = allHostels.filter(h => savedHostelIds.includes(h.id));
 
   // Apply filtering and search
   const filteredSaved = savedHostels.filter(h => {
@@ -134,7 +133,7 @@ export default function Saved() {
               <div 
                 key={hostel.id} 
                 onClick={() => setSelectedHostel(hostel)}
-                className="w-full bg-white dark:bg-card rounded-2xl p-4 shadow-sm border border-border/40 flex items-center justify-between group animate-in fade-in slide-in-from-bottom-4 duration-300 cursor-pointer hover:shadow-md transition-all"
+                className="w-full bg-card rounded-2xl p-4 shadow-sm border border-border/40 flex items-center justify-between group animate-in fade-in slide-in-from-bottom-4 duration-300 cursor-pointer hover:shadow-md transition-all"
               >
                 <div className="flex items-center space-x-4">
                   <img src={hostel.image} alt={hostel.name} loading="lazy" className="w-20 h-20 rounded-[18px] object-cover shadow-sm" />

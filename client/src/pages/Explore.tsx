@@ -6,15 +6,17 @@ import { useState, useEffect } from "react";
 import FilterModal from "@/components/FilterModal";
 import HostelCard from "@/components/HostelCard";
 import HostelDetailsOverlay from "@/components/HostelDetailsOverlay";
-import { MOST_POPULAR, NEARBY_PLACES, ALL_HOSTELS } from "../data/hostels";
+import { useHostels } from "@/contexts/HostelsContext";
+import { useAuth } from "@/contexts/AuthContext";
+import { getInitials } from "@/lib/utils";
 import { useToast } from "@/components/ui/toaster";
 
 export default function Explore() {
   const { toast } = useToast();
+  const { user } = useAuth();
   const location = useLocation();
-  const [selectedHostel, setSelectedHostel] = useState<any>(() => {
-    return location.state?.restoreHostel ? ALL_HOSTELS.find(h => h.id === location.state.restoreHostel) || null : null;
-  });
+  const { allHostels, mostPopular, nearbyPlaces, isLoading, error } = useHostels();
+  const [selectedHostel, setSelectedHostel] = useState<any>(null);
   const [savedHostels, setSavedHostels] = useState<string[]>(() => {
     const saved = localStorage.getItem("saved_hostels");
     return saved ? JSON.parse(saved) : [];
@@ -22,10 +24,10 @@ export default function Explore() {
 
   useEffect(() => {
     if (location.state?.restoreHostel) {
-      const hostel = ALL_HOSTELS.find(h => h.id === location.state.restoreHostel);
+      const hostel = allHostels.find(h => h.id === location.state.restoreHostel);
       if (hostel) setSelectedHostel(hostel);
     }
-  }, [location.state]);
+  }, [location.state, allHostels]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilters, setActiveFilters] = useState<{ distance: number; amenities: string[], priceRange: [number, number] }>({ 
@@ -34,7 +36,7 @@ export default function Explore() {
     priceRange: [0, 10000] 
   });
 
-  const filteredPopular = MOST_POPULAR.filter(h => {
+  const filteredPopular = mostPopular.filter(h => {
     if (searchQuery && !h.name.toLowerCase().includes(searchQuery.toLowerCase()) && !h.location.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (parseFloat(h.distance) > activeFilters.distance) return false;
     if (h.startingPrice < activeFilters.priceRange[0] || h.startingPrice > activeFilters.priceRange[1]) return false;
@@ -42,7 +44,7 @@ export default function Explore() {
     return true;
   });
 
-  const filteredNearby = NEARBY_PLACES.filter(h => {
+  const filteredNearby = nearbyPlaces.filter(h => {
     if (searchQuery && !h.name.toLowerCase().includes(searchQuery.toLowerCase()) && !h.location.toLowerCase().includes(searchQuery.toLowerCase())) return false;
     if (parseFloat(h.distance) > activeFilters.distance) return false;
     if (h.startingPrice < activeFilters.priceRange[0] || h.startingPrice > activeFilters.priceRange[1]) return false;
@@ -77,7 +79,7 @@ export default function Explore() {
         <div className="flex items-center space-x-4">
           <NotificationsDropdown />
           <Link to="/profile" className="w-[52px] h-[52px] bg-[#E5D0BA] rounded-full flex items-center justify-center font-bold text-[#6c5e57] shadow-sm text-lg cursor-pointer hover:opacity-90">
-            SA
+            {getInitials(user?.name || user?.email)}
           </Link>
         </div>
       </header>
@@ -128,7 +130,7 @@ export default function Explore() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPopular.length === 0 && <p className="text-muted-foreground text-sm py-4">No popular hostels match your search.</p>}
+            {filteredPopular.length === 0 && <p className="text-muted-foreground text-sm py-4">{isLoading ? "Loading hostels..." : error ?? "No popular hostels match your search."}</p>}
             {filteredPopular.map((hostel) => (
               <HostelCard 
                 key={hostel.id}
@@ -154,7 +156,7 @@ export default function Explore() {
               <div 
                 key={hostel.id} 
                 onClick={() => setSelectedHostel(hostel)}
-                className="w-full bg-white dark:bg-card rounded-2xl p-4 flex items-center shadow-sm border border-border/40 cursor-pointer hover:shadow-md transition-all gap-4"
+                className="w-full bg-card rounded-2xl p-4 flex items-center shadow-sm border border-border/40 cursor-pointer hover:shadow-md transition-all gap-4"
               >
                 <img src={hostel.image} alt={hostel.name} loading="lazy" className="w-[110px] h-[110px] rounded-[18px] object-cover shrink-0" />
                 <div className="flex-1 overflow-hidden">

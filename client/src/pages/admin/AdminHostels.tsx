@@ -81,7 +81,7 @@ export default function AdminHostels() {
       </div>
 
       {/* Hostels Table Card */}
-      <div className="bg-white dark:bg-card border border-border/40 rounded-2xl overflow-hidden shadow-sm">
+      <div className="bg-card border border-border/40 rounded-2xl overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
           <table className="w-full text-left border-collapse">
             <thead>

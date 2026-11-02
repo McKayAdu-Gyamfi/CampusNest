@@ -52,7 +52,7 @@ export default function AdminDashboard() {
             {loadedAt ? `Updated ${loadedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Loading…"}
           </p>
         </div>
-        <button className="w-12 h-12 bg-white dark:bg-card border border-border/50 rounded-full flex items-center justify-center relative shadow-sm hover:bg-accent transition-colors cursor-pointer">
+        <button className="w-12 h-12 bg-card border border-border/50 rounded-full flex items-center justify-center relative shadow-sm hover:bg-accent transition-colors cursor-pointer">
           <Bell className="w-5 h-5 text-[#5E5B58]" />
         </button>
       </div>
@@ -64,7 +64,7 @@ export default function AdminDashboard() {
       {/* 4 Stat Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {cards.map(({ icon: Icon, value, label }) => (
-          <div key={label} className="bg-white dark:bg-card border border-border/40 rounded-2xl p-5 shadow-sm">
+          <div key={label} className="bg-card border border-border/40 rounded-2xl p-5 shadow-sm">
             <div className="flex items-center justify-between mb-3">
               <div className="w-10 h-10 rounded-xl bg-[#F8F4EE] flex items-center justify-center text-[#C56A30]">
                 <Icon className="w-5 h-5" />
@@ -79,7 +79,7 @@ export default function AdminDashboard() {
       {/* Middle Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Revenue Chart */}
-        <div className="lg:col-span-2 bg-white dark:bg-card border border-border/40 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
+        <div className="lg:col-span-2 bg-card border border-border/40 rounded-2xl p-6 shadow-sm flex flex-col justify-between">
           <div className="mb-6">
             <h3 className="font-extrabold text-lg text-foreground">Revenue</h3>
             <p className="text-[12px] text-muted-foreground font-medium">confirmed bookings · last {series.length || 7} months</p>
@@ -109,7 +109,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Pending Approvals */}
-        <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
+        <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-extrabold text-lg text-foreground">Pending approvals</h3>
             <span className="w-6 h-6 rounded-full bg-[#F5E6D8] text-[#C56A30] font-extrabold text-xs flex items-center justify-center">
@@ -145,7 +145,7 @@ export default function AdminDashboard() {
       {/* Bottom Section */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Top Hostels */}
-        <div className="lg:col-span-2 bg-white dark:bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
+        <div className="lg:col-span-2 bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between mb-5">
             <h3 className="font-extrabold text-lg text-foreground">Top hostels</h3>
             <span className="text-[12px] text-muted-foreground font-medium">by confirmed bookings</span>
@@ -174,7 +174,7 @@ export default function AdminDashboard() {
         </div>
 
         {/* Platform totals */}
-        <div className="bg-white dark:bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
+        <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm">
           <h3 className="font-extrabold text-lg text-foreground mb-5">Platform totals</h3>
 
           <div className="space-y-4">
