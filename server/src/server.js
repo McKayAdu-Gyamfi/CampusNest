@@ -16,7 +16,8 @@ app.listen(PORT, async () => {
     await convex.query(api.verifications.findMany, { where: [], limit: 1, secret: CONVEX_ADAPTER_SECRET });
     console.log("✅ Convex is connected and operational.");
   } catch (error) {
-    console.error("❌ Convex connection failed:", error.message);
+    console.error("❌ Convex connection failed:", error.message || error);
+    if (error.data) console.error("   Details:", JSON.stringify(error.data));
   }
 
   console.log("---------------------------------------------------");

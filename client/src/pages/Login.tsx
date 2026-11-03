@@ -148,7 +148,7 @@ export default function Login() {
 
         {/* Top Header - Desktop Only */}
         <div className="hidden sm:block absolute top-8 left-8 z-10">
-          <Logo iconClassName="h-10 w-auto brightness-0 invert" textClassName="text-xl font-bold tracking-tight text-white" />
+          <Logo iconClassName="h-14 w-auto brightness-0 invert" textClassName="text-2xl font-bold tracking-tight text-white" />
         </div>
 
         {/* Center Card */}
@@ -371,9 +371,9 @@ export default function Login() {
           
           {/* Logo */}
           <div>
-            <Logo iconClassName="h-14 w-auto brightness-0 invert" textClassName="text-2xl font-bold tracking-tight text-white" />
+            <Logo iconClassName="h-20 w-auto brightness-0 invert" textClassName="text-4xl font-bold tracking-tight text-white" />
             {role === "manager" && (
-              <span className="block mt-1 ml-[62px] text-[11px] font-bold tracking-[0.2em] uppercase text-canyon">
+              <span className="block mt-1 ml-[86px] text-[11px] font-bold tracking-[0.2em] uppercase text-canyon">
                 For Property Managers
               </span>
             )}
