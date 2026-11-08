@@ -154,13 +154,15 @@ describe("stats", () => {
     const { m1 } = await fixture(t);
     const o = await t.query(api.stats.managerOverview, { managerId: m1, asOf: JULY_15, secret });
 
-    expect(o.beds_total).toBe(6); // 4 + 2, pending hostel included
+    expect(o.beds_total).toBe(4); // live hostels only: the pending hostel's 2 beds don't count
     expect(o.beds_filled).toBe(3);
-    expect(o.occupancy_rate).toBeCloseTo(0.5);
+    expect(o.occupancy_rate).toBeCloseTo(0.75);
+    expect(o.rooms_total).toBe(1);
+    expect(o.rooms_full).toBe(0);
     expect(o.revenue_this_month).toBe(2000); // CONFIRMED + CHECKED_OUT in July, not PENDING/CANCELLED/June
     expect(o.month).toBe("Jul");
     expect(o.pending_bookings).toBe(1);
-    expect(o.hostels.map((h: any) => h.hostel_name).sort()).toEqual(["Dufie", "Pending One"]);
+    expect(o.hostels.map((h: any) => h.hostel_name)).toEqual(["Dufie"]);
     expect(o.recent_bookings).toHaveLength(4);
     expect(o.recent_bookings[0]).toMatchObject({ student_name: "Ama", hostel_name: "Dufie", amount: 1000 });
   });

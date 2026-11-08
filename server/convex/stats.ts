@@ -5,7 +5,7 @@ import { secureQuery } from "./lib/secureFunction";
 // is cached or stored, so the numbers cannot drift from the bookings/rooms
 // they summarise.
 //
-// Revenue = sum of the room's price_per_bed over CONFIRMED and CHECKED_OUT
+// Revenue = sum of the amount paid (else the room's price_per_bed) over CONFIRMED and CHECKED_OUT
 // bookings, attributed to the UTC month the booking was CREATED ("bookings
 // taken that month", not "stays served"). UTC equals Ghana time (GMT, no
 // daylight saving).
@@ -55,10 +55,12 @@ async function gather(ctx: any, hostels: any[]) {
     const rooms = await roomsOf(ctx, h._id);
     let total = 0;
     let filled = 0;
+    let roomsFull = 0;
     for (const r of rooms) {
       roomById.set(r._id, r);
       total += r.capacity;
       filled += r.current_occupancy;
+      if (r.current_occupancy >= r.capacity) roomsFull++;
       bookings.push(...(await bookingsOfRoom(ctx, r._id)));
     }
     perHostel.push({
@@ -68,13 +70,17 @@ async function gather(ctx: any, hostels: any[]) {
       beds_total: total,
       beds_filled: filled,
       occupancy_rate: total === 0 ? 0 : filled / total,
+      rooms_total: rooms.length,
+      rooms_full: roomsFull,
     });
   }
   return { roomById, hostelById, perHostel, bookings };
 }
 
+// What the student actually paid; falls back to the room's price for
+// bookings made before payments were recorded.
 function amountOf(booking: any, roomById: Map<string, any>) {
-  return roomById.get(booking.room_id)?.price_per_bed ?? 0;
+  return booking.amount_paid ?? roomById.get(booking.room_id)?.price_per_bed ?? 0;
 }
 
 function revenueByMonth(bookings: any[], roomById: Map<string, any>) {
@@ -105,8 +111,13 @@ export const managerOverview = secureQuery(
 
     const { roomById, hostelById, perHostel, bookings } = await gather(ctx, hostels);
 
-    const bedsTotal = perHostel.reduce((s, h) => s + h.beds_total, 0);
-    const bedsFilled = perHostel.reduce((s, h) => s + h.beds_filled, 0);
+    // Occupancy describes the listings students can actually book: a
+    // rejected or still-pending hostel must not dilute or inflate it.
+    const live = perHostel.filter((h) => h.status === "APPROVED");
+    const bedsTotal = live.reduce((s, h) => s + h.beds_total, 0);
+    const bedsFilled = live.reduce((s, h) => s + h.beds_filled, 0);
+    const roomsTotal = live.reduce((s, h) => s + h.rooms_total, 0);
+    const roomsFull = live.reduce((s, h) => s + h.rooms_full, 0);
 
     const thisMonth = monthKey(now);
     let revenueThisMonth = 0;
@@ -140,10 +151,12 @@ export const managerOverview = secureQuery(
       beds_total: bedsTotal,
       beds_filled: bedsFilled,
       occupancy_rate: bedsTotal === 0 ? 0 : bedsFilled / bedsTotal,
+      rooms_total: roomsTotal,
+      rooms_full: roomsFull,
       revenue_this_month: revenueThisMonth,
       pending_bookings: bookings.filter((b) => b.status === "PENDING").length,
       recent_bookings: recentRows,
-      hostels: perHostel,
+      hostels: live,
     };
   }
 );
