@@ -1,13 +1,20 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import request from "supertest";
 
-const { cqMock, cmMock, session } = vi.hoisted(() => ({
+const { cqMock, cmMock, verifyMock, session } = vi.hoisted(() => ({
   cqMock: vi.fn(),
   cmMock: vi.fn(),
+  verifyMock: vi.fn(),
   session: { user: null },
 }));
 
 vi.mock("../src/config/convexClient.js", () => ({ cq: cqMock, cm: cmMock, ca: vi.fn() }));
+
+// Paystack is never called from tests: verifyTransaction is a controllable fake.
+vi.mock("../src/modules/payments/payments.routes.js", async () => {
+  const { Router } = await import("express");
+  return { default: Router(), verifyTransaction: verifyMock };
+});
 
 // Swap the real session lookup for a settable fake user.
 vi.mock("../auth.js", () => ({
@@ -26,6 +33,7 @@ const as = (user_type) => {
 beforeEach(() => {
   cqMock.mockReset();
   cmMock.mockReset();
+  verifyMock.mockReset();
   as(null);
 });
 
@@ -89,16 +97,154 @@ describe("stats routes", () => {
   });
 });
 
-describe("maintenance mode on booking creation", () => {
+const bookingBody = {
+  room_id: "room-1", check_in_date: "2026-11-01T00:00:00Z", check_out_date: "2027-05-01T00:00:00Z",
+};
+const asStudentWithRoom = () => {
+  as("STUDENT");
+  cqMock
+    .mockResolvedValueOnce({ profile_complete: true }) // requireCompleteProfile
+    .mockResolvedValueOnce({ id: "room-1", is_available: true }); // rooms.getBasics
+};
+
+describe("booking creation", () => {
   it("maps MAINTENANCE_MODE to 503", async () => {
-    as("STUDENT");
-    cqMock
-      .mockResolvedValueOnce({ profile_complete: true }) // requireCompleteProfile
-      .mockResolvedValueOnce({ id: "room-1", is_available: true }); // rooms.getBasics
+    asStudentWithRoom();
+    verifyMock.mockResolvedValue({ status: "success", amount: 7000, user_id: "STUDENT-id" });
     cmMock.mockRejectedValue(Object.assign(new Error("x"), { data: { code: "MAINTENANCE_MODE" } }));
-    const res = await request(app)
-      .post("/api/bookings")
-      .send({ room_id: "room-1", student_id: "x", check_in_date: "2026-11-01T00:00:00Z", check_out_date: "2027-05-01T00:00:00Z" });
+    const res = await request(app).post("/api/bookings").send({ ...bookingBody, payment_reference: "KC-1" });
     expect(res.status).toBe(503);
   });
+
+  it("requires a payment reference from students", async () => {
+    asStudentWithRoom();
+    const res = await request(app).post("/api/bookings").send(bookingBody);
+    expect(res.status).toBe(402);
+    expect(cmMock).not.toHaveBeenCalled();
+  });
+
+  it("rejects a payment Paystack did not confirm, or one made by someone else", async () => {
+    asStudentWithRoom();
+    verifyMock.mockResolvedValue({ status: "abandoned", amount: 7000, user_id: "STUDENT-id" });
+    expect((await request(app).post("/api/bookings").send({ ...bookingBody, payment_reference: "KC-1" })).status).toBe(402);
+
+    asStudentWithRoom();
+    verifyMock.mockResolvedValue({ status: "success", amount: 7000, user_id: "someone-else" });
+    expect((await request(app).post("/api/bookings").send({ ...bookingBody, payment_reference: "KC-2" })).status).toBe(402);
+    expect(cmMock).not.toHaveBeenCalled();
+  });
+
+  it("stores the verified amount and reference, and maps a reused payment to 409", async () => {
+    asStudentWithRoom();
+    verifyMock.mockResolvedValue({ status: "success", amount: 8500, user_id: "STUDENT-id" });
+    cmMock.mockResolvedValueOnce({ id: "b1" });
+    const ok = await request(app).post("/api/bookings").send({ ...bookingBody, payment_reference: "KC-3" });
+    expect(ok.status).toBe(201);
+    expect(cmMock.mock.calls[0][1].data).toMatchObject({ payment_reference: "KC-3", amount_paid: 8500, student_id: "STUDENT-id" });
+
+    asStudentWithRoom();
+    cmMock.mockRejectedValueOnce(Object.assign(new Error("x"), { data: { code: "DUPLICATE_PAYMENT" } }));
+    const dup = await request(app).post("/api/bookings").send({ ...bookingBody, payment_reference: "KC-3" });
+    expect(dup.status).toBe(409);
+  });
 });
+
+describe("notifications routes", () => {
+  it("require auth and are scoped to the signed-in user", async () => {
+    expect((await request(app).get("/api/notifications")).status).toBe(401);
+    as("HOSTEL_MANAGER");
+    cqMock.mockResolvedValue([]);
+    await request(app).get("/api/notifications?userId=someone-else");
+    expect(cqMock.mock.calls[0][1]).toMatchObject({ userId: "HOSTEL_MANAGER-id" });
+  });
+});
+
+describe("complaints routes", () => {
+  it("a student's message always carries their own id, plus the new kind/subject fields", async () => {
+    as("STUDENT");
+    cqMock
+      .mockResolvedValueOnce({ manager_id: "mgr-1" }) // hostels.getManagerId
+      .mockResolvedValueOnce(["room-1"]) // rooms.listIdsByHostel
+      .mockResolvedValueOnce(true); // bookings.existsForStudentInRooms
+    cmMock.mockResolvedValueOnce({ id: "c1" });
+    const res = await request(app).post("/api/complaints").send({
+      hostel_id: "h1", kind: "ENQUIRY", subject: "Parking", content: "Is parking included?", student_id: "someone-else",
+    });
+    expect(res.status).toBe(201);
+    expect(cmMock.mock.calls[0][1].data).toMatchObject({
+      student_id: "STUDENT-id", hostel_manager_id: "mgr-1", kind: "ENQUIRY", subject: "Parking",
+    });
+  });
+
+  it("rejects an empty message and a student with no booking at that hostel", async () => {
+    as("STUDENT");
+    expect((await request(app).post("/api/complaints").send({ hostel_id: "h1", content: "   " })).status).toBe(400);
+    cqMock.mockResolvedValueOnce({ manager_id: "m" }).mockResolvedValueOnce([]).mockResolvedValueOnce(false);
+    expect((await request(app).post("/api/complaints").send({ hostel_id: "h1", content: "hi" })).status).toBe(403);
+    expect(cmMock).not.toHaveBeenCalled();
+  });
+
+  it("only the hostel's own manager can reply", async () => {
+    as("HOSTEL_MANAGER");
+    cqMock.mockResolvedValueOnce({ id: "c1", hostel_manager_id: "someone-else" });
+    expect((await request(app).patch("/api/complaints/c1").send({ reply: "ok" })).status).toBe(403);
+
+    cqMock.mockResolvedValueOnce({ id: "c1", hostel_manager_id: "HOSTEL_MANAGER-id" });
+    cmMock.mockResolvedValueOnce({ id: "c1", reply: "ok" });
+    const ok = await request(app).patch("/api/complaints/c1").send({ reply: "ok", status: "RESOLVED" });
+    expect(ok.status).toBe(200);
+    expect(cmMock.mock.calls[0][1]).toMatchObject({ id: "c1", reply: "ok", status: "RESOLVED" });
+  });
+
+  it("a student cannot reply or change status", async () => {
+    as("STUDENT");
+    cqMock.mockResolvedValueOnce({ id: "c1", hostel_manager_id: "m" });
+    expect((await request(app).patch("/api/complaints/c1").send({ status: "RESOLVED" })).status).toBe(403);
+  });
+
+  it("needs a status or a reply", async () => {
+    as("HOSTEL_MANAGER");
+    expect((await request(app).patch("/api/complaints/c1").send({})).status).toBe(400);
+  });
+});
+
+describe("hostel photos are admin-only", () => {
+  it("a manager cannot add or remove photos, even on their own hostel", async () => {
+    as("HOSTEL_MANAGER");
+    expect((await request(app).post("/api/hostels/h1/images")).status).toBe(403);
+    expect((await request(app).delete("/api/hostels/h1/images/i1")).status).toBe(403);
+    expect(cmMock).not.toHaveBeenCalled();
+  });
+
+  it("a student cannot, and an admin can remove a photo", async () => {
+    as("STUDENT");
+    expect((await request(app).delete("/api/hostels/h1/images/i1")).status).toBe(403);
+    as("ADMIN");
+    cmMock.mockResolvedValueOnce(true);
+    expect((await request(app).delete("/api/hostels/h1/images/i1")).status).toBe(200);
+    expect(cmMock.mock.calls[0][1]).toEqual({ hostelId: "h1", imageId: "i1" });
+  });
+});
+
+describe("review routes", () => {
+  it("only a student who has stayed can review, and it is filed under their own id", async () => {
+    as("STUDENT");
+    cqMock.mockResolvedValueOnce(["room-1"]).mockResolvedValueOnce(false);
+    expect((await request(app).post("/api/reviews").send({ hostel_id: "h1", rating: 5 })).status).toBe(403);
+    expect(cmMock).not.toHaveBeenCalled();
+
+    cqMock.mockResolvedValueOnce(["room-1"]).mockResolvedValueOnce(true);
+    cmMock.mockResolvedValueOnce({ id: "r1" });
+    const ok = await request(app).post("/api/reviews").send({ hostel_id: "h1", rating: 4, comment: "Nice", student_id: "someone-else" });
+    expect(ok.status).toBe(201);
+    expect(cmMock.mock.calls[0][1].data).toMatchObject({ student_id: "STUDENT-id", rating: 4, replace_existing: true });
+  });
+
+  it("rejects an out-of-range rating and non-students", async () => {
+    as("STUDENT");
+    expect((await request(app).post("/api/reviews").send({ hostel_id: "h1", rating: 6 })).status).toBe(400);
+    as("HOSTEL_MANAGER");
+    expect((await request(app).post("/api/reviews").send({ hostel_id: "h1", rating: 5 })).status).toBe(403);
+  });
+});
+
