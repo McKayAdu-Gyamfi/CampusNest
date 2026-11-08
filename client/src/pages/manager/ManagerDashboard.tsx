@@ -1,6 +1,9 @@
 import { useEffect, useState } from "react";
-import { Bell, Plus, Bed, Receipt, Clock, Building2, ChevronRight } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
+import ProfileCompletionBanner from "@/components/ProfileCompletionBanner";
+import { Plus, Bed, Receipt, Clock, Building2, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
+import NotificationsDropdown from "@/components/NotificationsDropdown";
 import { useAuth } from "@/contexts/AuthContext";
 import { getManagerStats, formatGHS, errorMessage, type ManagerStats, type RecentBooking } from "@/lib/adminApi";
 
@@ -60,9 +63,7 @@ export default function ManagerDashboard() {
                <h1 className="text-xl font-bold text-[#463C38]">{name}</h1>
              </div>
           </div>
-          <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center relative shadow-sm text-[#463C38]">
-            <Bell className="w-5 h-5" />
-          </button>
+          <NotificationsDropdown />
         </div>
       </div>
 
@@ -73,10 +74,8 @@ export default function ManagerDashboard() {
           <p className="text-[#8C8279] text-sm font-medium mt-1">{today}</p>
         </div>
         <div className="flex items-center space-x-4">
-          <button className="w-10 h-10 bg-white rounded-full flex items-center justify-center shadow-sm text-[#463C38]">
-            <Bell className="w-5 h-5" />
-          </button>
-          <Link to="/manager/properties" className="bg-[#A84A1A] hover:bg-[#8F3E15] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors flex items-center space-x-2">
+          <NotificationsDropdown />
+          <Link to={`${ROUTES.manager.properties}?addRoom=1`} className="bg-[#A84A1A] hover:bg-[#8F3E15] text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow-sm transition-colors flex items-center space-x-2">
             <Plus className="w-4 h-4" />
             <span>Add room</span>
           </Link>
@@ -84,6 +83,8 @@ export default function ManagerDashboard() {
       </div>
 
       <div className="px-5 lg:px-8 space-y-6 lg:space-y-0 lg:grid lg:grid-cols-3 lg:gap-6">
+
+        <ProfileCompletionBanner className="lg:col-span-3" />
 
         {error && (
           <div className="lg:col-span-3 p-4 rounded-2xl bg-red-50 border border-red-200 text-sm font-bold text-red-700">{error}</div>
@@ -101,6 +102,7 @@ export default function ManagerDashboard() {
             <h2 className="text-2xl font-bold text-[#463C38]">{stats ? pct(stats.occupancy_rate) : dash}</h2>
             <p className="text-[11px] font-medium text-[#8C8279] mt-0.5">
               Occupancy{stats ? ` · ${stats.beds_filled}/${stats.beds_total} beds` : ""}
+              {stats?.rooms_total ? ` · ${stats.rooms_full ?? 0} of ${stats.rooms_total} rooms full` : ""}
             </p>
           </div>
 
@@ -145,7 +147,7 @@ export default function ManagerDashboard() {
           <div className="bg-white rounded-2xl p-5 shadow-sm flex flex-col h-full">
             <div className="flex items-center justify-between mb-6">
                <h3 className="text-base font-bold text-[#463C38]">Recent bookings</h3>
-               <Link to="/manager/bookings" className="text-sm font-bold text-[#A84A1A] hover:underline">View all</Link>
+               <Link to={ROUTES.manager.bookings} className="text-sm font-bold text-[#A84A1A] hover:underline">View all</Link>
             </div>
 
             {/* Desktop Table Header */}
@@ -228,7 +230,7 @@ export default function ManagerDashboard() {
               <h3 className="text-base font-bold text-[#463C38] mb-4">Action needed</h3>
               <div className="space-y-3">
                  {stats.pending_bookings > 0 && (
-                 <Link to="/manager/bookings" className="flex items-start space-x-3 p-3 rounded-xl hover:bg-[#F0EFEA]/50 transition-colors cursor-pointer group">
+                 <Link to={ROUTES.manager.bookings} className="flex items-start space-x-3 p-3 rounded-xl hover:bg-[#F0EFEA]/50 transition-colors cursor-pointer group">
                     <div className="w-8 h-8 rounded-lg bg-[#F8F6F3] text-[#A84A1A] flex items-center justify-center shrink-0">
                        <Clock className="w-4 h-4" />
                     </div>
@@ -242,7 +244,7 @@ export default function ManagerDashboard() {
                  )}
 
                  {awaitingReview > 0 && (
-                 <Link to="/manager/properties" className="flex items-start space-x-3 p-3 rounded-xl hover:bg-[#F0EFEA]/50 transition-colors cursor-pointer group">
+                 <Link to={ROUTES.manager.properties} className="flex items-start space-x-3 p-3 rounded-xl hover:bg-[#F0EFEA]/50 transition-colors cursor-pointer group">
                     <div className="w-8 h-8 rounded-lg bg-[#F8F6F3] text-[#A84A1A] flex items-center justify-center shrink-0">
                        <Building2 className="w-4 h-4" />
                     </div>

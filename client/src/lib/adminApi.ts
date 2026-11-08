@@ -36,6 +36,8 @@ export interface HostelOccupancy {
   beds_total: number;
   beds_filled: number;
   occupancy_rate: number;
+  rooms_total?: number;
+  rooms_full?: number;
 }
 
 export interface RecentBooking {
@@ -54,6 +56,8 @@ export interface ManagerStats {
   beds_total: number;
   beds_filled: number;
   occupancy_rate: number;
+  rooms_total?: number;
+  rooms_full?: number;
   revenue_this_month: number;
   pending_bookings: number;
   recent_bookings: RecentBooking[];

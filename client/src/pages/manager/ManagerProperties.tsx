@@ -1,108 +1,86 @@
-import { Wifi, Wind, ShieldCheck, WashingMachine, Utensils, BookOpen, Plus, Pencil } from "lucide-react";
+import { useEffect, useState } from "react";
+import NotificationsDropdown from "@/components/NotificationsDropdown";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { ChevronRight, MapPin, Star } from "lucide-react";
+import { useAuth } from "@/contexts/AuthContext";
+import { errorMessage } from "@/lib/adminApi";
+import { listManagerHostels, type ManagerHostel } from "@/lib/managerHostels";
 
 export default function ManagerProperties() {
-  const pricing = [
-    { type: "Premium Studio", details: "ensuite · 12 rooms", price: "8,400" },
-    { type: "Single Room", details: "shared bath · 20 rooms", price: "7,000" },
-    { type: "Shared Twin", details: "shared bath · 14 rooms", price: "5,200" }
-  ];
+  const { user } = useAuth();
+  const [params] = useSearchParams();
+  const [properties, setProperties] = useState<ManagerHostel[] | null>(null);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    listManagerHostels(user.id).then(setProperties).catch((e) => setError(errorMessage(e)));
+  }, [user?.id]);
+
+  // "Add room" from the dashboard: with a single property, go straight to its room form.
+  if (params.get("addRoom") && properties?.length === 1) {
+    return <Navigate to={`/manager/properties/${properties[0].id}?addRoom=1`} replace />;
+  }
 
   return (
     <div className="flex flex-col h-full min-h-screen bg-[#F0EFEA] pb-20">
-      {/* Header */}
-      <div className="px-5 lg:px-8 pt-10 pb-6 sticky top-0 bg-[#F0EFEA]/90 backdrop-blur-md z-40 flex items-center justify-between gap-4 border-b border-solid border-[#E5D0BA]/50 mb-6">
-        <h1 className="text-xl lg:text-[22px] font-bold text-[#463C38]">Manage hostel</h1>
-        <button className="bg-[#A84A1A] hover:bg-[#8F3E15] text-white px-5 py-2.5 rounded-full font-bold text-sm shadow-sm transition-colors cursor-pointer shrink-0">
-          Save changes
-        </button>
+      <div className="px-5 lg:px-8 pt-10 pb-6 sticky top-0 bg-[#F0EFEA]/90 backdrop-blur-md z-40 border-b border-solid border-[#E5D0BA]/50 mb-6 flex items-center justify-between">
+        <div>
+          <h1 className="text-xl lg:text-[22px] font-bold text-[#463C38]">My properties</h1>
+          {properties && (
+            <p className="text-[13px] font-medium text-[#8C8279] mt-0.5">
+              {properties.length} {properties.length === 1 ? "property" : "properties"} · tap one to manage it
+            </p>
+          )}
+        </div>
+        <NotificationsDropdown />
       </div>
 
-      <div className="px-5 lg:px-8 space-y-4 w-full">
-        
-        {/* Cover Card */}
-        <div className="bg-white rounded-2xl p-5 shadow-sm flex flex-col sm:flex-row gap-5">
-          <div className="w-full sm:w-[200px] h-32 rounded-xl bg-[#E5D0BA] flex items-center justify-center relative shrink-0 overflow-hidden">
-             <div className="absolute inset-0 pattern-diagonal-lines pattern-[#C8B09A] pattern-bg-transparent pattern-size-4 pattern-opacity-40" />
-             <span className="bg-white/90 backdrop-blur-sm px-3 py-1 rounded-md text-[10px] font-extrabold uppercase tracking-widest text-[#5C4538] relative z-10">COVER</span>
-          </div>
-          <div className="flex flex-col justify-center">
-             <h2 className="text-[20px] font-bold text-[#463C38] mb-1">Dufie Annex</h2>
-             <p className="text-[13px] font-medium text-[#8C8279] mb-4">Berekuso, Eastern Region · 60 beds</p>
-             <button className="flex items-center space-x-2 border border-[#E5E0D8] px-4 py-2 rounded-full text-[13px] font-bold text-[#5C4538] hover:bg-[#F8F6F3] w-fit transition-colors">
-               <Pencil className="w-3.5 h-3.5" />
-               <span>Edit photos & details</span>
-             </button>
-          </div>
-        </div>
+      <div className="px-5 lg:px-8">
+        {error && <div className="p-4 rounded-2xl bg-red-50 border border-red-200 text-sm font-bold text-red-700">{error}</div>}
+        {!properties && !error && <p className="text-sm font-medium text-[#8C8279]">Loading…</p>}
+        {properties?.length === 0 && <p className="text-sm font-medium text-[#8C8279]">You don't have any approved properties yet.</p>}
 
-        {/* Pricing */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="mb-6">
-            <h3 className="text-base font-bold text-[#463C38] mb-1">Pricing per semester</h3>
-            <p className="text-[13px] font-medium text-[#8C8279]">Set the price for each room type. Applies to new bookings.</p>
-          </div>
-          
-          <div className="space-y-0">
-            {pricing.map((room, i) => (
-              <div key={i} className="flex justify-between items-center py-4 border-b border-[#F0EFEA] last:border-0">
-                <div className="flex flex-col">
-                  <span className="font-bold text-[#463C38] text-[14px]">{room.type}</span>
-                  <span className="text-[12px] font-medium text-[#8C8279] mt-0.5">{room.details}</span>
+        <div className="grid gap-5 sm:grid-cols-2 xl:grid-cols-3">
+          {properties?.map((p) => (
+            <Link
+              key={p.id}
+              to={`/manager/properties/${p.id}`}
+              className="group bg-white rounded-2xl shadow-sm overflow-hidden hover:shadow-md transition-shadow"
+            >
+              <div className="h-44 bg-[#E5D0BA] overflow-hidden">
+                {p.images[0] && (
+                  <img src={p.images[0].url} alt={p.name} className="w-full h-full object-cover group-hover:scale-[1.03] transition-transform duration-300" />
+                )}
+              </div>
+              <div className="p-5">
+                <div className="flex items-start justify-between gap-3">
+                  <h2 className="text-[18px] font-bold text-[#463C38]">{p.name}</h2>
+                  <span className="flex items-center space-x-1 bg-[#FDF3E7] text-[#A84A1A] px-2 py-0.5 rounded-full text-[12px] font-bold shrink-0">
+                    <Star className="w-3.5 h-3.5 fill-current" />
+                    <span>{p.rating.toFixed(1)}</span>
+                  </span>
                 </div>
-                <div className="flex items-center space-x-3">
-                   <span className="bg-[#F8F6F3] px-3 py-1.5 rounded-lg text-[13px] font-bold text-[#8C8279]">GHS</span>
-                   <span className="font-bold text-[#463C38] text-[16px] w-[60px] text-right">{room.price}</span>
+                <p className="flex items-center text-[13px] font-medium text-[#8C8279] mt-1">
+                  <MapPin className="w-3.5 h-3.5 mr-1" />
+                  {p.location}
+                </p>
+                <div className="flex items-center justify-between mt-4 pt-4 border-t border-[#F0EFEA]">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#A29A91]">From</span>
+                    <p className="font-bold text-[#463C38]">
+                      GHS {p.sharedPrice.toLocaleString("en-GH")}
+                      <span className="text-[12px] font-medium text-[#8C8279]"> /semester</span>
+                    </p>
+                  </div>
+                  <span className="flex items-center text-[13px] font-bold text-[#A84A1A]">
+                    Manage <ChevronRight className="w-4 h-4 ml-0.5 group-hover:translate-x-0.5 transition-transform" />
+                  </span>
                 </div>
               </div>
-            ))}
-          </div>
+            </Link>
+          ))}
         </div>
-
-        {/* Amenities */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm">
-          <div className="mb-6">
-            <h3 className="text-base font-bold text-[#463C38] mb-1">Amenities</h3>
-            <p className="text-[13px] font-medium text-[#8C8279]">Tap to include. These show on your listing.</p>
-          </div>
-          
-          <div className="flex flex-wrap gap-2.5">
-            {[
-              { label: "Wi-Fi", icon: Wifi, active: true },
-              { label: "Air-con", icon: Wind, active: true },
-              { label: "24/7 security", icon: ShieldCheck, active: true },
-              { label: "Laundry", icon: WashingMachine, active: true },
-              { label: "Kitchen", icon: Utensils, active: false },
-              { label: "Study desk", icon: BookOpen, active: false }
-            ].map((amenity, i) => (
-              <button 
-                key={i}
-                className={`flex items-center space-x-2 border px-4 py-2 rounded-full font-bold text-[13px] transition-colors cursor-pointer ${
-                  amenity.active 
-                    ? 'border-[#C8B09A] text-[#A84A1A] bg-transparent hover:bg-[#F1E8DC]/30' 
-                    : 'border-transparent text-[#8C8279] bg-[#F8F6F3] hover:bg-[#E5E0D8]'
-                }`}
-              >
-                <amenity.icon className="w-4 h-4" />
-                <span>{amenity.label}</span>
-                {amenity.active && <span className="ml-1.5 w-1 h-2 rounded-[2px] bg-[#A84A1A] rotate-45 transform -translate-y-0.5" />}
-              </button>
-            ))}
-            <button className="flex items-center space-x-1.5 border border-dashed border-[#C8B09A] text-[#A84A1A] px-4 py-2 rounded-full font-bold text-[13px] hover:bg-[#F1E8DC]/50 transition-colors">
-              <Plus className="w-4 h-4" />
-              <span>Add custom</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Rooms */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm flex items-center justify-between">
-          <h3 className="text-base font-bold text-[#463C38]">Rooms</h3>
-          <button className="flex items-center space-x-1.5 border border-[#E5E0D8] px-4 py-2 rounded-full text-[13px] font-bold text-[#A84A1A] hover:bg-[#F8F6F3] transition-colors cursor-pointer">
-            <Plus className="w-4 h-4" />
-            <span>Add room</span>
-          </button>
-        </div>
-
       </div>
     </div>
   );
