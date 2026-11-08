@@ -3,6 +3,8 @@ import { APIError } from "better-auth/api";
 import { convexAdapter } from "./auth-convex-adapter.js";
 import { cq } from "./src/config/convexClient.js";
 import { api } from "./convex/_generated/api.js";
+import { passwordResetEmail, sendMail } from "./src/utils/mailer.js";
+import { canResetByEmail } from "./src/utils/passwordReset.js";
 
 export const auth = betterAuth({
 
@@ -19,7 +21,22 @@ export const auth = betterAuth({
   // ── Email/Password Authentication ─────────────
   emailAndPassword: {
     enabled: true,
-    autoSignIn: false
+    autoSignIn: false,
+    minPasswordLength: 8,
+    resetPasswordTokenExpiresIn: 60 * 60, // the emailed link works for one hour, once
+    // A reset signs the account out everywhere: whoever held the old password loses access.
+    revokeSessionsOnPasswordReset: true,
+    sendResetPassword: async ({ user, url }) => {
+      if (!canResetByEmail(user)) {
+        console.warn("[Auth] Password reset requested for an account that can't reset by email; no email sent");
+        return;
+      }
+      // Deliberately not awaited: a fast response for unknown emails and a slow
+      // one for real accounts would reveal which emails are registered.
+      const { subject, text, html } = passwordResetEmail({ name: user.name, url });
+      sendMail({ to: user.email, subject, text, html, devNote: `Reset link: ${url}` })
+        .catch((e) => console.error("[Auth] Could not send the password reset email:", e.message));
+    },
   },
 
   // ── Expose Custom Fields in Response ────────

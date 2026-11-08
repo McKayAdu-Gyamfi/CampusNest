@@ -67,3 +67,30 @@ describe("verifications CRUD", () => {
     ).rejects.toThrow(/unauthorized/i);
   });
 });
+
+describe("verifications: comparison operators (password-reset cleanup)", () => {
+  it("findMany supports lt/gt so better-auth can sweep expired rows, and still rejects unknown operators", async () => {
+    const t = convexTest(schema, modules);
+    const now = Date.now();
+    await t.mutation(api.verifications.create, { data: { identifier: "reset-password:old", value: "u1", expiresAt: now - 1000 }, secret });
+    await t.mutation(api.verifications.create, { data: { identifier: "reset-password:new", value: "u2", expiresAt: now + 3_600_000 }, secret });
+
+    const expired = await t.query(api.verifications.findMany, { where: [{ field: "expiresAt", value: now, operator: "lt" }], secret });
+    expect(expired.map((r: any) => r.identifier)).toEqual(["reset-password:old"]);
+    const live = await t.query(api.verifications.findMany, { where: [{ field: "expiresAt", value: now, operator: "gt" }], secret });
+    expect(live.map((r: any) => r.identifier)).toEqual(["reset-password:new"]);
+    const notOld = await t.query(api.verifications.findMany, { where: [{ field: "identifier", value: "reset-password:old", operator: "ne" }], secret });
+    expect(notOld).toHaveLength(1);
+
+    await expect(
+      t.query(api.verifications.findMany, { where: [{ field: "identifier", value: "x", operator: "contains" }], secret })
+    ).rejects.toThrow(/Unsupported where operator/);
+  });
+
+  it("the other auth tables stay equality-only", async () => {
+    const t = convexTest(schema, modules);
+    await expect(
+      t.query(api.sessions.findOne, { where: [{ field: "token", value: "x", operator: "lt" }], secret })
+    ).rejects.toThrow(/Unsupported where operator/);
+  });
+});

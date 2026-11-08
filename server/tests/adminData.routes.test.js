@@ -325,3 +325,16 @@ describe("admin console routes", () => {
     expect(cqMock.mock.calls.at(-1)[1]).toEqual({ limit: 500 });
   });
 });
+
+describe("password reset requests", () => {
+  it("are rate limited (5 an hour) before they reach the auth handler", async () => {
+    const codes = [];
+    for (let i = 0; i < 7; i++) {
+      const r = await request(app).post("/api/auth/request-password-reset").send({ email: "a@b.com", redirectTo: "http://localhost:5173/reset-password" });
+      codes.push(r.status);
+    }
+    expect(codes.slice(0, 5).every((c) => c === 200)).toBe(true);
+    expect(codes.slice(5)).toEqual([429, 429]);
+  });
+});
+

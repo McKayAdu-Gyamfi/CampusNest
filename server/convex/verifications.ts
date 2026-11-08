@@ -1,10 +1,43 @@
 // server/convex/verifications.ts
 import { v } from "convex/values";
 import type { Id } from "./_generated/dataModel";
-import { matchesWhere, validateWhere, type WhereClause } from "./lib/whereMatch";
+import type { WhereClause } from "./lib/whereMatch";
 import { toApiDoc } from "./lib/toApiDoc";
 import { applySort } from "./lib/applySort";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
+
+// Verification rows are the one table where better-auth needs comparisons, not just
+// equality: before every lookup it sweeps expired rows ("expiresAt < now"), and the
+// password-reset flow does a lookup. Equality-only matching made that sweep throw,
+// which turned every "forgot password" request into a 500. The other auth tables keep
+// the strict equality-only matcher.
+const OPERATORS = new Set(["eq", "ne", "lt", "lte", "gt", "gte"]);
+
+function validateWhere(where: WhereClause[]): void {
+  for (const clause of where) {
+    if (clause.operator && !OPERATORS.has(clause.operator)) {
+      throw new Error(`Unsupported where operator "${clause.operator}" on field "${clause.field}" — verifications support eq, ne, lt, lte, gt and gte.`);
+    }
+  }
+}
+
+function compare(actual: any, expected: any, operator = "eq"): boolean {
+  switch (operator) {
+    case "eq": return actual === expected;
+    case "ne": return actual !== expected;
+    // A missing value never satisfies an ordering comparison.
+    case "lt": return actual !== undefined && actual < expected;
+    case "lte": return actual !== undefined && actual <= expected;
+    case "gt": return actual !== undefined && actual > expected;
+    case "gte": return actual !== undefined && actual >= expected;
+    default: return false;
+  }
+}
+
+function matchesWhere(doc: Record<string, unknown>, where: WhereClause[]): boolean {
+  validateWhere(where);
+  return where.every((c) => compare(doc[c.field], c.value, c.operator));
+}
 
 const whereValidator = v.array(v.object({ field: v.string(), value: v.any(), operator: v.optional(v.string()) }));
 
