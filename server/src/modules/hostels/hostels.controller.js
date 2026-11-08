@@ -171,3 +171,17 @@ export const uploadHostelImages = async (req, res, next) => {
   }
 };
 
+
+// DELETE /api/hostels/:id/images/:imageId
+export const removeHostelImage = async (req, res, next) => {
+  try {
+    const { id, imageId } = req.params;
+    const removed = await cm(api.hostels.removeImage, { hostelId: id, imageId });
+    if (!removed) {
+      return res.status(404).json({ success: false, message: "Image not found" });
+    }
+    res.json({ success: true, message: "Image removed" });
+  } catch (err) {
+    next(err);
+  }
+};

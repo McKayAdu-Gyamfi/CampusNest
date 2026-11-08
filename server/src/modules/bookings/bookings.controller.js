@@ -1,5 +1,6 @@
 import { cq, cm } from "../../config/convexClient.js";
 import { api } from "../../../convex/_generated/api.js";
+import { verifyTransaction } from "../payments/payments.routes.js";
 
 // GET /api/bookings?student_id=123
 export const getBookings = async (req, res, next) => {
@@ -56,7 +57,7 @@ export const getBookingById = async (req, res, next) => {
 // POST /api/bookings
 export const createBooking = async (req, res, next) => {
   try {
-    const { check_in_date, check_out_date, room_id, student_id } = req.body;
+    const { check_in_date, check_out_date, room_id, student_id, payment_reference } = req.body;
 
     const room = await cq(api.rooms.getBasics, { id: room_id });
 
@@ -72,12 +73,33 @@ export const createBooking = async (req, res, next) => {
     // Otherwise allow Manager/Admin to specify student_id
     const final_student_id = req.user.user_type === "STUDENT" ? req.user.id : student_id;
 
+    if (!final_student_id) {
+      return res.status(400).json({ success: false, message: "student_id is required" });
+    }
+
+    // A student's booking is only created for a payment Paystack confirms:
+    // successful, made by this user, and not already used for another booking.
+    let amount_paid;
+    if (req.user.user_type === "STUDENT") {
+      if (!payment_reference) {
+        return res.status(402).json({ success: false, message: "A completed payment is required to book a room" });
+      }
+      const tx = await verifyTransaction(payment_reference);
+      if (tx.status !== "success" || (tx.user_id && tx.user_id !== req.user.id)) {
+        return res.status(402).json({ success: false, message: "Payment could not be verified" });
+      }
+      amount_paid = tx.amount;
+    }
+
     const data = await cm(api.bookings.create, {
-      data: { check_in_date, check_out_date, room_id, student_id: final_student_id },
+      data: { check_in_date, check_out_date, room_id, student_id: final_student_id, payment_reference, amount_paid },
     });
 
     res.status(201).json({ success: true, data });
   } catch (err) {
+    if (err.data?.code === "DUPLICATE_PAYMENT") {
+      return res.status(409).json({ success: false, message: "This payment has already been used for a booking" });
+    }
     if (err.data?.code === "MAINTENANCE_MODE") {
       return res.status(503).json({
         success: false,
@@ -119,7 +141,7 @@ export const updateBookingStatus = async (req, res, next) => {
     // together inside this one mutation.
     let data;
     try {
-      data = await cm(api.bookings.updateStatus, { id, status });
+      data = await cm(api.bookings.updateStatus, { id, status, byStudent: req.user.user_type === "STUDENT" });
     } catch (err) {
       // err.data.code, not err.message — Convex redacts a plain Error's
       // message on a prod deployment, so matching on text would pass in

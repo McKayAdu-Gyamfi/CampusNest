@@ -22,7 +22,9 @@ router.put("/:id/amenities", requireAuth, verifyHostelOwnership, validateRequest
 router.post("/:id/amenities", requireAuth, verifyHostelOwnership, validateRequest(addAmenitySchema), controllers.addHostelAmenity);
 router.delete("/:id/amenities/:amenityId", requireAuth, verifyHostelOwnership, controllers.removeHostelAmenity);
 
-// Image upload route
-router.post("/:id/images", requireAuth, verifyHostelOwnership, uploadMiddleware.array("images", 10), controllers.uploadHostelImages);
+// Photos are curated by the platform: only an admin can add or remove them.
+// Managers see their photos but cannot change them.
+router.post("/:id/images", requireAuth, requireRole("ADMIN"), uploadMiddleware.array("images", 10), controllers.uploadHostelImages);
+router.delete("/:id/images/:imageId", requireAuth, requireRole("ADMIN"), controllers.removeHostelImage);
 
 export default router;

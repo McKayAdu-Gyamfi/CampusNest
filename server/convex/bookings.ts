@@ -3,6 +3,7 @@ import { v, ConvexError } from "convex/values";
 import { toApiRow } from "./lib/toApiRow";
 import { readSettings } from "./settings";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
+import { notify } from "./lib/notify";
 
 const bookingStatus = v.union(
   v.literal("PENDING"), v.literal("CONFIRMED"), v.literal("CANCELLED"), v.literal("CHECKED_OUT")
@@ -18,13 +19,21 @@ async function withRelations(ctx: any, booking: any, includeManagerId: boolean) 
       ? { hostel_name: hostel.hostel_name }
       : null;
     if (nestedHostel && includeManagerId) nestedHostel.manager_id = hostel!.manager_id ?? null;
-    row.ROOM = { room_number: room.room_number, hostel_id: room.hostel_id, HOSTEL: nestedHostel };
+    row.ROOM = {
+      room_number: room.room_number,
+      room_type: room.room_type,
+      price_per_bed: room.price_per_bed,
+      hostel_id: room.hostel_id,
+      HOSTEL: nestedHostel,
+    };
   } else {
     row.ROOM = null;
   }
 
   const student = await ctx.db.get(booking.student_id);
-  row.USERS = student ? { email: student.email, profile_complete: student.profile_complete } : null;
+  row.USERS = student
+    ? { email: student.email, name: student.name, course: student.course, profile_complete: student.profile_complete }
+    : null;
 
   return row;
 }
@@ -108,8 +117,19 @@ export const create = secureMutation({ data: v.any() }, async (ctx, { data }) =>
   const studentId = ctx.db.normalizeId("users", data.student_id);
   if (!studentId) throw new Error("Student not found");
 
+  // A Paystack reference pays for exactly one booking.
+  if (data.payment_reference) {
+    const reused = await ctx.db
+      .query("bookings")
+      .filter((q: any) => q.eq(q.field("payment_reference"), data.payment_reference))
+      .first();
+    if (reused) throw new ConvexError({ code: "DUPLICATE_PAYMENT" });
+  }
+
   const now = Date.now();
   const bookingId = await ctx.db.insert("bookings", {
+    payment_reference: data.payment_reference ?? undefined,
+    amount_paid: data.amount_paid ?? undefined,
     check_in_date: new Date(data.check_in_date).getTime(),
     check_out_date: new Date(data.check_out_date).getTime(),
     status: "PENDING",
@@ -118,12 +138,34 @@ export const create = secureMutation({ data: v.any() }, async (ctx, { data }) =>
     created_at: now,
     updated_at: now,
   });
+
+  // Tell the hostel's manager about the request, and the student that it was received.
+  const room = await ctx.db.get(roomId);
+  const hostel = room ? await ctx.db.get(room.hostel_id) : null;
+  const student = await ctx.db.get(studentId);
+  const who = student?.name || student?.email || "A student";
+  const where = hostel ? `${hostel.hostel_name}, room ${room.room_number}` : "your hostel";
+  if (hostel?.manager_id) {
+    await notify(ctx, hostel.manager_id, {
+      type: "booking_request",
+      title: "New booking request",
+      message: `${who} requested ${where}${data.amount_paid ? ` and paid GHS ${Number(data.amount_paid).toLocaleString("en-GH")}` : ""}.`,
+      bookingId,
+    });
+  }
+  await notify(ctx, studentId, {
+    type: "booking_submitted",
+    title: data.payment_reference ? "Payment verified" : "Booking submitted",
+    message: `${data.payment_reference ? "Your payment was confirmed. " : ""}Your request for ${where} is awaiting the manager's approval.`,
+    bookingId,
+  });
+
   return toApiRow((await ctx.db.get(bookingId))!);
 });
 
 export const updateStatus = secureMutation(
-  { id: v.string(), status: bookingStatus },
-  async (ctx, { id, status }) => {
+  { id: v.string(), status: bookingStatus, byStudent: v.optional(v.boolean()) },
+  async (ctx, { id, status, byStudent }) => {
     const bookingId = ctx.db.normalizeId("bookings", id);
     if (!bookingId) return null;
     const booking = await ctx.db.get(bookingId);
@@ -180,6 +222,37 @@ export const updateStatus = secureMutation(
         if (student && student.current_room_id === room._id) {
           await ctx.db.patch(booking.student_id, { current_room_id: undefined });
         }
+      }
+    }
+
+    // Notify the other party about the change.
+    if (status !== previous) {
+      const hostel = room ? await ctx.db.get(room.hostel_id) : null;
+      const where = hostel ? `${hostel.hostel_name}, room ${room!.room_number}` : "your room";
+      if (byStudent) {
+        const student = await ctx.db.get(booking.student_id);
+        if (hostel?.manager_id && status === "CANCELLED") {
+          await notify(ctx, hostel.manager_id, {
+            type: "booking_cancelled",
+            title: "Booking cancelled by student",
+            message: `${student?.name || student?.email || "A student"} cancelled their booking for ${where}.`,
+            bookingId,
+          });
+        }
+      } else if (status === "CONFIRMED") {
+        await notify(ctx, booking.student_id, {
+          type: "booking_approved",
+          title: "Booking approved",
+          message: `Great news: your booking for ${where} was approved. Your room is secured.`,
+          bookingId,
+        });
+      } else if (status === "CANCELLED") {
+        await notify(ctx, booking.student_id, {
+          type: "booking_declined",
+          title: previous === "PENDING" ? "Booking declined" : "Booking cancelled",
+          message: `Your booking for ${where} was ${previous === "PENDING" ? "declined" : "cancelled"} by the manager.`,
+          bookingId,
+        });
       }
     }
 

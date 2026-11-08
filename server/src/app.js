@@ -13,6 +13,8 @@ import usersRouter from "./modules/users/users.routes.js";
 import authRouter from "./modules/auth/auth.routes.js";
 import settingsRouter from "./modules/settings/settings.routes.js";
 import schoolsRouter from "./modules/schools/schools.routes.js";
+import paymentsRouter from "./modules/payments/payments.routes.js";
+import notificationsRouter from "./modules/notifications/notifications.routes.js";
 import statsRouter from "./modules/stats/stats.routes.js";
 import { errorHandler, notFoundHandler } from "./middlewares/errorHandler.js";
 
@@ -50,6 +52,8 @@ app.use("/api/users", usersRouter);
 app.use("/api/settings", settingsRouter);
 app.use("/api/schools", schoolsRouter);
 app.use("/api/stats", statsRouter);
+app.use("/api/payments", paymentsRouter);
+app.use("/api/notifications", notificationsRouter);
 
 // Error Handling
 app.use(notFoundHandler);

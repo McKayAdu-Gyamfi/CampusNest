@@ -2,6 +2,7 @@
 import { v } from "convex/values";
 import { toApiRow } from "./lib/toApiRow";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
+import { notify } from "./lib/notify";
 
 async function withManager(ctx: any, hostel: any) {
   const row = toApiRow(hostel);
@@ -115,6 +116,15 @@ export const update = secureMutation({ id: v.string(), patch: v.any() }, async (
   const existing = await ctx.db.get(hostelId);
   if (!existing) return null;
   await ctx.db.patch(hostelId, { ...patch, updated_at: Date.now() });
+  if (patch.status && patch.status !== existing.status && existing.manager_id) {
+    if (patch.status === "APPROVED" || patch.status === "REJECTED") {
+      await notify(ctx, existing.manager_id, {
+        type: patch.status === "APPROVED" ? "hostel_approved" : "hostel_rejected",
+        title: patch.status === "APPROVED" ? "Hostel approved" : "Hostel not approved",
+        message: `${existing.hostel_name} was ${patch.status === "APPROVED" ? "approved and is now live for students" : "not approved by the admin"}.`,
+      });
+    }
+  }
   const updated = await ctx.db.get(hostelId);
   return updated ? toApiRow(updated) : null;
 });
@@ -130,5 +140,19 @@ export const addImages = secureMutation(
       created.push(toApiRow((await ctx.db.get(rowId))!));
     }
     return created;
+  }
+);
+
+export const removeImage = secureMutation(
+  { hostelId: v.string(), imageId: v.string() },
+  async (ctx, { hostelId, imageId }) => {
+    const hid = ctx.db.normalizeId("hostels", hostelId);
+    const iid = ctx.db.normalizeId("hostelImages", imageId);
+    if (!hid || !iid) return false;
+    const image = await ctx.db.get(iid);
+    // Scoped to the hostel so one manager can't delete another's photo by id.
+    if (!image || image.hostel_id !== hid) return false;
+    await ctx.db.delete(iid);
+    return true;
   }
 );
