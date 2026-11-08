@@ -13,6 +13,8 @@ export interface AuthUser {
   studentId?: string;
   course?: string;
   emailVerified: boolean;
+  /** Full backend record (absent on the optimistic cached user). */
+  details?: BackendUser;
 }
 
 const ROLE_CACHE_KEY = "cached_user_type";
@@ -37,6 +39,7 @@ function toAuthUser(backendUser: BackendUser): AuthUser {
     studentId: backendUser.student_id,
     course: backendUser.course,
     emailVerified: !!backendUser.emailVerified,
+    details: backendUser,
   };
 }
 

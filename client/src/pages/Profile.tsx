@@ -1,4 +1,5 @@
 import { Heart, BedDouble, Star, Settings, ShieldCheck, Bell, ChevronRight, LogOut } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { apiFetch } from "@/lib/apiClient";
@@ -58,19 +59,11 @@ export default function Profile() {
 
       <div className="px-5 lg:px-8 space-y-8 pt-24 lg:pt-0 w-full">
         
-        {/* Mobile Header Title */}
-        <div className="lg:hidden text-center -mx-5 px-5 pt-4 pb-2 bg-gradient-to-b from-[#3D261B] to-[#3D261B]/95 text-white">
-          {/* <h1 className="text-2xl font-bold text-white">My account</h1> */}
-        </div>
-
         {/* Profile Hero Banner Card */}
-        <div className="w-[calc(100%+40px)] -mx-5 md:mx-0 md:w-full bg-gradient-to-br from-[#3D261B] via-[#7B3C1F] to-[#B85822] md:rounded-2xl rounded-b-[40px] px-6 pb-10 pt-4 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 text-white shadow-sm relative overflow-hidden -mt-10 md:mt-0 mb-8">
+        <div className="w-[calc(100%+40px)] -mx-5 md:mx-0 md:w-full bg-gradient-to-br from-[#3D261B] via-[#7B3C1F] to-[#B85822] md:rounded-2xl rounded-b-[40px] px-6 pb-10 pt-4 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 text-white shadow-sm relative overflow-hidden mb-8">
           
           {/* Decorative circles */}
           <div className="absolute top-[-50px] right-[-50px] w-48 h-48 bg-white/5 rounded-full blur-2xl" />
-          <div className="absolute top-4 right-6 w-10 h-10 rounded-full bg-white/10 flex items-center justify-center backdrop-blur-sm">
-            <Settings className="w-5 h-5 text-white/80" />
-          </div>
 
           <div className="flex flex-col md:flex-row items-center text-center md:text-left space-y-4 md:space-y-0 md:space-x-5 z-10 w-full mt-4 md:mt-0">
             <div className="w-24 h-24 md:w-20 md:h-20 rounded-full flex items-center justify-center text-white font-extrabold text-3xl md:text-2xl shadow-md border-[3px] border-white/20 shrink-0 overflow-hidden transition-colors"
@@ -105,8 +98,8 @@ export default function Profile() {
           </div>
 
           <Link 
-            to="/settings" 
-            className="hidden md:block w-full md:w-auto text-center bg-white text-[#3D261B] hover:bg-white/90 font-extrabold text-[15px] px-6 py-2.5 rounded-full transition-all shadow-sm shrink-0 cursor-pointer z-10"
+            to={ROUTES.student.settings} 
+            className="hidden md:block w-full md:w-auto text-center bg-white dark:bg-card text-[#3D261B] dark:text-foreground hover:bg-white/90 font-extrabold text-[15px] px-6 py-2.5 rounded-full transition-all shadow-sm shrink-0 cursor-pointer z-10"
           >
             Edit profile
           </Link>
@@ -128,7 +121,7 @@ export default function Profile() {
                 <div>
                   <div className="flex items-center space-x-2 mb-1">
                     <h4 className="font-extrabold text-[18px] text-foreground">{currentBooking.hostelName}</h4>
-                    <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center space-x-1 ${currentBooking.status === 'CONFIRMED' ? 'bg-[#E6F4EA] text-[#137333]' : 'bg-amber-100 text-amber-700'}`}>
+                    <span className={`text-[11px] font-extrabold px-2.5 py-0.5 rounded-full flex items-center space-x-1 ${currentBooking.status === 'CONFIRMED' ? 'bg-[#E6F4EA] dark:bg-emerald-500/15 text-[#137333] dark:text-emerald-400' : 'bg-amber-100 text-amber-700'}`}>
                       <span className={`w-1.5 h-1.5 rounded-full ${currentBooking.status === 'CONFIRMED' ? 'bg-[#137333]' : 'bg-amber-500'}`} />
                       <span className="uppercase">{currentBooking.status}</span>
                     </span>
@@ -139,7 +132,7 @@ export default function Profile() {
                   <div className="flex items-center space-x-6">
                     <div>
                       <span className="text-[11px] text-muted-foreground font-medium block">Paid</span>
-                      <span className="text-[15px] font-extrabold text-[#137333]">GHS {currentBooking.price.toLocaleString()}</span>
+                      <span className="text-[15px] font-extrabold text-[#137333] dark:text-emerald-400">GHS {currentBooking.price.toLocaleString()}</span>
                     </div>
                     <div>
                       <span className="text-[11px] text-muted-foreground font-medium block">Semester</span>
@@ -181,7 +174,7 @@ export default function Profile() {
 
         {/* Settings Links */}
         <div className="bg-card border border-border/40 rounded-2xl shadow-sm overflow-hidden divide-y divide-border/40">
-          <Link to="/settings" className="flex items-center justify-between p-5 hover:bg-accent/40 transition-colors cursor-pointer group">
+          <Link to={ROUTES.student.settings} className="flex items-center justify-between p-5 hover:bg-accent/40 transition-colors cursor-pointer group">
             <div className="flex items-center space-x-4">
               <Settings className="w-5 h-5 text-[#8C5B4F]" />
               <span className="font-bold text-[15px] text-foreground">Account settings</span>
@@ -189,7 +182,7 @@ export default function Profile() {
             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
           </Link>
 
-          <Link to="/settings" className="flex items-center justify-between p-5 hover:bg-accent/40 transition-colors cursor-pointer group">
+          <Link to={ROUTES.student.settings} className="flex items-center justify-between p-5 hover:bg-accent/40 transition-colors cursor-pointer group">
             <div className="flex items-center space-x-4">
               <ShieldCheck className="w-5 h-5 text-[#8C5B4F]" />
               <span className="font-bold text-[15px] text-foreground">Privacy & security</span>
@@ -197,7 +190,7 @@ export default function Profile() {
             <ChevronRight className="w-4 h-4 text-muted-foreground group-hover:text-foreground transition-colors" />
           </Link>
 
-          <Link to="/settings" className="flex items-center justify-between p-5 hover:bg-accent/40 transition-colors cursor-pointer group">
+          <Link to={ROUTES.student.notifications} className="flex items-center justify-between p-5 hover:bg-accent/40 transition-colors cursor-pointer group">
             <div className="flex items-center space-x-4">
               <Bell className="w-5 h-5 text-[#8C5B4F]" />
               <span className="font-bold text-[15px] text-foreground">Notifications</span>
@@ -206,7 +199,7 @@ export default function Profile() {
           </Link>
 
           <Link
-            to="/login"
+            to={ROUTES.student.login}
             onClick={() => { signOut(); }}
             className="flex items-center justify-between p-5 hover:bg-red-500/10 transition-colors cursor-pointer group"
           >

@@ -27,11 +27,13 @@ interface ApiEnvelope<T> {
  * the two by checking `e instanceof ApiError`.
  */
 export async function apiFetch<T = unknown>(path: string, options: RequestInit = {}): Promise<T> {
+  // FormData needs the browser to set the multipart boundary itself.
+  const isForm = typeof FormData !== "undefined" && options.body instanceof FormData;
   const res = await fetch(`${API_BASE}${path}`, {
     ...options,
     credentials: "include",
     headers: {
-      "Content-Type": "application/json",
+      ...(isForm ? {} : { "Content-Type": "application/json" }),
       ...options.headers,
     },
   });
