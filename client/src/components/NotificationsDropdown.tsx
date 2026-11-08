@@ -1,46 +1,17 @@
 import { useState, useRef, useEffect } from "react";
-import { Bell, CheckCircle2, ShieldCheck, TrendingDown } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
+import { Bell } from "lucide-react";
+import { Link } from "react-router-dom";
+import { useAuth } from "@/contexts/AuthContext";
+import { useNotifications } from "@/contexts/NotificationsContext";
+import { notificationIcon, timeAgo } from "@/lib/notificationIcon";
 
-export default function NotificationsDropdown() {
+export default function NotificationsDropdown({ variant = "default" }: { variant?: "default" | "sidebar" }) {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const [activeTab, setActiveTab] = useState("View All");
-
-  const [notifications, setNotifications] = useState([
-    {
-      id: 1,
-      type: "notification",
-      title: "Payment successfully verified",
-      message: "Your rent payment has been confirmed. Proceed with your receipt.",
-      time: "Tuesday 7:30 am",
-      read: false,
-      icon: <CheckCircle2 className="w-5 h-5" />,
-      iconColor: "text-blue-500",
-      iconBg: "bg-blue-500/10 border-blue-500/20"
-    },
-    {
-      id: 2,
-      type: "weekly_update",
-      title: "Dufie Annex Price Drop!",
-      message: "Dufie Annex has reduced prices for the upcoming semester. Book now to save 10%.",
-      time: "Monday 9:30 am",
-      read: false,
-      icon: <TrendingDown className="w-5 h-5" />,
-      iconColor: "text-emerald-500",
-      iconBg: "bg-emerald-500/10 border-emerald-500/20"
-    },
-    {
-      id: 3,
-      type: "notification",
-      title: "Security password updated",
-      message: "Your security password has been successfully changed.",
-      time: "Sunday 4:30 pm",
-      read: true,
-      icon: <ShieldCheck className="w-5 h-5" />,
-      iconColor: "text-purple-500",
-      iconBg: "bg-purple-500/10 border-purple-500/20"
-    }
-  ]);
+  const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
+  const { user } = useAuth();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -54,45 +25,31 @@ export default function NotificationsDropdown() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, [isOpen]);
 
-  const tabs = ["View All", "Unread", "Weekly Updates"];
-  
-  const filteredNotifications = notifications.filter(n => {
-    if (activeTab === "Unread") return !n.read;
-    if (activeTab === "Weekly Updates") return n.type === "weekly_update";
-    return true;
-  });
+  const tabs = ["View All", "Unread"];
 
-  const markAsRead = (id: number) => {
-    setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
-  };
-  
-  const markAllAsRead = () => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
+  const filteredNotifications = notifications.filter((n) => (activeTab === "Unread" ? !n.read : true));
 
   return (
     <div className="relative" ref={dropdownRef}>
       {/* Bell Button */}
       <button 
         onClick={() => setIsOpen(!isOpen)} 
-        className="w-10 h-10 lg:w-[52px] lg:h-[52px] bg-card border border-border/50 rounded-full flex items-center justify-center relative shadow-sm hover:bg-accent transition-colors cursor-pointer"
+        className={`${variant === "sidebar" ? "w-10 h-10" : "w-10 h-10 lg:w-[52px] lg:h-[52px]"} bg-card border border-border/50 rounded-full flex items-center justify-center relative shadow-sm hover:bg-accent transition-colors cursor-pointer`}
       >
         <Bell className="w-5 h-5 text-[#5E5B58]" />
         {unreadCount > 0 && (
-          <span className="absolute top-2.5 right-2.5 w-2.5 h-2.5 bg-[#C56A30] rounded-full border-2 border-white" />
+          <span className="absolute -top-0.5 -right-0.5 min-w-[18px] h-[18px] px-1 bg-[#C56A30] text-white text-[10px] font-extrabold rounded-full border-2 border-white flex items-center justify-center">{unreadCount > 9 ? "9+" : unreadCount}</span>
         )}
       </button>
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute right-[-40px] sm:right-0 mt-3 w-[320px] sm:w-[360px] bg-card border border-border/50 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col origin-top-right animate-in fade-in zoom-in-95 duration-200">
+        <div className={`${variant === "sidebar" ? "fixed left-[272px] top-24" : "absolute right-[-40px] sm:right-0 mt-3"} w-[320px] sm:w-[360px] bg-card border border-border/50 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col origin-top-right animate-in fade-in zoom-in-95 duration-200`}>
           
           <div className="p-4 border-b border-border/40 flex items-center justify-between bg-card">
             <h3 className="font-extrabold text-lg text-foreground">Notifications</h3>
             {unreadCount > 0 && (
-              <button onClick={markAllAsRead} className="text-xs font-extrabold text-[#C56A30] hover:underline transition-colors mt-1 cursor-pointer">
+              <button onClick={markAllRead} className="text-xs font-extrabold text-[#C56A30] hover:underline transition-colors mt-1 cursor-pointer">
                 Mark all as read
               </button>
             )}
@@ -121,13 +78,13 @@ export default function NotificationsDropdown() {
             {filteredNotifications.map((n) => (
               <div 
                 key={n.id}
-                onClick={() => markAsRead(n.id)}
+                onClick={() => markRead(n.id)}
                 className={`p-3 rounded-2xl transition-colors cursor-pointer flex gap-4 ${
                   n.read ? 'opacity-70 hover:bg-accent/30' : 'bg-[#C56A30]/10 border border-[#C56A30]/20 hover:bg-[#C56A30]/15'
                 }`}
               >
                 <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 border bg-[#C56A30]/15 text-[#C56A30] border-[#C56A30]/30`}>
-                  {n.icon}
+                  {(() => { const { Icon } = notificationIcon(n.type); return <Icon className="w-5 h-5" />; })()}
                 </div>
                 <div className="flex-1 relative">
                   {!n.read && <div className="absolute top-1 right-0 w-2 h-2 rounded-full bg-[#C56A30]" />}
@@ -135,18 +92,23 @@ export default function NotificationsDropdown() {
                     <h4 className={`font-extrabold text-[13px] ${n.read ? 'text-foreground/80' : 'text-foreground pr-4'}`}>{n.title}</h4>
                   </div>
                   <p className="text-[12px] text-muted-foreground leading-snug mb-1.5">{n.message}</p>
-                  <span className="text-[10px] font-medium text-muted-foreground/80">{n.time}</span>
+                  <span className="text-[10px] font-medium text-muted-foreground/80">{timeAgo(n.created_at)}</span>
                 </div>
               </div>
             ))}
             
             {filteredNotifications.length === 0 && (
               <div className="py-8 text-center text-sm font-medium text-muted-foreground">
-                No notifications here.
+                {activeTab === "Unread" ? "You're all caught up." : "No notifications yet. Booking updates will show up here."}
               </div>
             )}
           </div>
 
+          {user?.role === "student" && (
+            <Link to={ROUTES.student.notifications} onClick={() => setIsOpen(false)} className="block text-center py-3 border-t border-border/40 text-[13px] font-extrabold text-[#C56A30] hover:bg-accent/40 transition-colors">
+              See all notifications
+            </Link>
+          )}
         </div>
       )}
     </div>
