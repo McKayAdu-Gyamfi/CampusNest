@@ -17,6 +17,8 @@ const TITLES: [RegExp, string][] = [
   [/^\/notifications$/, "Notifications"],
   [/^\/login$/, "Sign in"],
   [/^\/signup$/, "Create your account"],
+  [/^\/forgot-password$/, "Forgot password"],
+  [/^\/reset-password$/, "Choose a new password"],
   [/^\/manager\/login$/, "Manager sign in"],
   [/^\/manager\/signup$/, "Create a manager account"],
   [/^\/manager\/dashboard$/, "Manager dashboard"],

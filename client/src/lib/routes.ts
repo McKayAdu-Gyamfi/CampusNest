@@ -26,6 +26,9 @@ export const ROUTES = {
     confirmation: "/checkout/confirmation",
     login: "/login",
     signup: "/signup",
+    // Shared by students and managers (`?role=manager` returns to the manager sign-in).
+    forgotPassword: "/forgot-password",
+    resetPassword: "/reset-password",
   },
   manager: {
     login: "/manager/login",
@@ -83,6 +86,7 @@ export function roleOfPath(path: string): FrontendRole {
 
 const AUTH_PATHS = new Set<string>([
   ROUTES.student.login, ROUTES.student.signup, ROUTES.manager.login, ROUTES.manager.signup, ROUTES.admin.login,
+  ROUTES.student.forgotPassword, ROUTES.student.resetPassword,
 ]);
 
 /**

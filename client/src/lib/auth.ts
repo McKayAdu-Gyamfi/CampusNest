@@ -55,6 +55,20 @@ export const registerManager = (email: string, password: string, name?: string) 
     body: JSON.stringify({ email, password, name, user_type: "HOSTEL_MANAGER" }),
   });
 
+/**
+ * Asks the server to email a reset link. It always succeeds from the caller's side
+ * (whether or not the address has an account) so the form can't be used to find out
+ * who is registered.
+ */
+export const requestPasswordReset = (email: string, role: "student" | "manager" = "student") =>
+  apiFetch("/auth/request-password-reset", {
+    method: "POST",
+    body: JSON.stringify({ email, redirectTo: `${window.location.origin}/reset-password?role=${role}` }),
+  });
+
+export const resetPassword = (token: string, newPassword: string) =>
+  apiFetch("/auth/reset-password", { method: "POST", body: JSON.stringify({ token, newPassword }) });
+
 export const signOutApi = () => apiFetch("/auth/sign-out", { method: "POST" });
 
 export const getMe = () => apiFetch<BackendUser>("/users/me");

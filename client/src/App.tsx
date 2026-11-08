@@ -38,6 +38,8 @@ const PaymentDetails = React.lazy(() => import("./pages/PaymentDetails"));
 const BookingConfirmed = React.lazy(() => import("./pages/BookingConfirmed"));
 const HostelDetail = React.lazy(() => import("./pages/HostelDetail"));
 const NotFound = React.lazy(() => import("./pages/NotFound"));
+const ForgotPassword = React.lazy(() => import("./pages/ForgotPassword"));
+const ResetPassword = React.lazy(() => import("./pages/ResetPassword"));
 const AdminLogin = React.lazy(() => import("./pages/AdminLogin"));
 
 const AdminLayout = React.lazy(() => import("./components/AdminLayout"));
@@ -126,6 +128,8 @@ export default function App() {
         <Route path="signup" element={<Login key="student" role="student" mode="signup" />} />
         <Route path="manager/login" element={<Login key="manager" role="manager" mode="signin" />} />
         <Route path="manager/signup" element={<Login key="manager" role="manager" mode="signup" />} />
+        <Route path="forgot-password" element={<ForgotPassword />} />
+        <Route path="reset-password" element={<ResetPassword />} />
         <Route path="admin/login" element={<AdminLogin />} />
 
         {/* ── Old URLs keep working ── */}

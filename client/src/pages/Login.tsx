@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Shield, Eye, EyeOff, CheckCircle, Monitor, BookOpen, Search, ChevronLeft } from "lucide-react";
-import { Navigate, useLocation, useNavigate } from "react-router-dom";
+import { Link, Navigate, useLocation, useNavigate } from "react-router-dom";
 import Logo from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { signUpStudent, signInEmail, registerManager } from "@/lib/auth";
@@ -8,7 +8,7 @@ import { ApiError } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { getInitials } from "@/lib/utils";
 import { useComingSoon } from "@/contexts/ComingSoonContext";
-import { authPath, landingFor } from "@/lib/routes";
+import { authPath, landingFor, ROUTES } from "@/lib/routes";
 
 // import { TygerAvatar } from 'tyger-avatar';
 
@@ -580,9 +580,9 @@ export default function Login({ role, mode: authMode }: LoginProps) {
               </div>
               {authMode === 'signin' && (
                 <div className="flex justify-end pt-1.5 pb-0.5">
-                  <button type="button" onClick={() => showComingSoon("Password reset")} className="text-[12px] font-semibold text-canyon hover:underline cursor-pointer">
+                  <Link to={`${ROUTES.student.forgotPassword}?role=${role}`} className="text-[12px] font-semibold text-canyon hover:underline cursor-pointer">
                     Forgot password?
-                  </button>
+                  </Link>
                 </div>
               )}
             </div>
