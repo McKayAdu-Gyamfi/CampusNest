@@ -1,27 +1,27 @@
-import { ArrowLeft, Calendar as CalendarIcon, Lock, ChevronRight, Info, MapPin, Moon } from "lucide-react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { ArrowLeft, Calendar as CalendarIcon, Lock, ChevronRight, Info, Moon } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import { Card } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import SelectedUnitCard from "@/components/SelectedUnitCard";
 import BookingProgress from "@/components/BookingProgress";
 import { useTheme } from "@/components/theme-provider";
 
+/** Checkout needs a chosen room: opened directly (or after a refresh) there is nothing to book, so go pick one. */
 export default function Booking() {
+  const { state } = useLocation();
+  if (!state?.hostelName || !state?.returnToHostel) return <Navigate to={ROUTES.student.explore} replace />;
+  return <BookingStep />;
+}
+
+function BookingStep() {
   const location = useLocation();
   const navigate = useNavigate();
   const { theme, setTheme } = useTheme();
-  const summary = location.state || {
-    hostelName: "Dufie Annex",
-    location: "Berekuso",
-    image: "https://images.unsplash.com/photo-1598928636135-d146006ff4be?auto=format&fit=crop&q=80&w=400&h=400",
-    roomLabel: "2 in a room",
-    price: 7000,
-    returnPath: null,
-    returnToHostel: null
-  };
+  const summary = location.state;
 
   const handleBack = () => {
     if (summary.returnPath) {
-      navigate(summary.returnPath, { state: { restoreHostel: summary.returnToHostel }, replace: true });
+      navigate(summary.returnPath, { replace: true });
     } else {
       navigate(-1);
     }
@@ -63,18 +63,7 @@ export default function Booking() {
           <div className="flex-1 space-y-10">
 
             {/* Selected Unit Summary */}
-            <Card className="bg-card border border-border/80 shadow-[0_4px_25px_rgba(0,0,0,0.03)] rounded-2xl overflow-hidden p-5 flex space-x-6 transition-colors">
-              <div className="w-32 h-32 rounded-2xl overflow-hidden shrink-0 shadow-sm">
-                <img src={summary.image} className="w-full h-full object-cover" alt="Selected Room" />
-              </div>
-              <div className="flex flex-col justify-center">
-                <div className="flex items-center space-x-2 mb-2">
-                  <Badge className="bg-primary/10 hover:bg-primary/20 text-primary transition-colors border-none text-[10px] px-2.5 py-0.5 tracking-wider uppercase font-bold">{summary.roomLabel}</Badge>
-                </div>
-                <h3 className="font-bold text-foreground text-xl mb-1.5 tracking-tight">{summary.hostelName}</h3>
-                <p className="text-sm font-semibold text-muted-foreground flex items-center"><MapPin className="w-4 h-4 mr-1 opacity-70" /> {summary.location}</p>
-              </div>
-            </Card>
+            <SelectedUnitCard image={summary.image} hostelName={summary.hostelName} location={summary.location} roomLabel={summary.roomLabel} price={summary.price} />
 
             {/* Semester Duration info */}
             <div>
@@ -137,7 +126,7 @@ export default function Booking() {
                 </div>
 
                 <button 
-                  onClick={() => navigate('/payment', { state: summary })}
+                  onClick={() => navigate(ROUTES.student.payment, { state: summary })}
                   className="w-full bg-primary hover:bg-primary/90 text-primary-foreground font-bold py-5 rounded-2xl shadow-[0_8px_25px_rgba(59,130,246,0.3)] flex justify-center items-center transition-transform hover:scale-[1.02] active:scale-[0.98] text-[16px]"
                 >
                    Proceed to Details <ChevronRight className="w-5 h-5 ml-2" />

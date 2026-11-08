@@ -1,9 +1,14 @@
 import { useState } from "react";
+import { ROUTES } from "@/lib/routes";
 import { Search } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useBookings } from "@/contexts/BookingContext";
 
+const directionsUrl = (name: string, location: string) =>
+  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${name} ${location}`.trim())}`;
+
 export default function ManageBookings() {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState("Upcoming");
   const { bookings: rawBookings } = useBookings();
 
@@ -16,6 +21,8 @@ export default function ManageBookings() {
     ref: b.reference,
     hostelName: b.hostelName,
     roomDetails: `${b.roomLabel} · ${b.roomNumber}`,
+    image: b.image,
+    location: b.location,
     moveIn: b.moveIn,
     semester: b.semester,
     amountPaid: b.status === "CONFIRMED" || b.status === "CHECKED_OUT" ? `GHS ${b.price.toLocaleString()}` : null,
@@ -45,7 +52,7 @@ export default function ManageBookings() {
         <div className="flex items-center justify-between mb-8">
           <h1 className="text-2xl font-bold text-[#463C38] dark:text-foreground">My bookings</h1>
           <Link 
-            to="/explore"
+            to={ROUTES.student.explore}
             className="flex items-center space-x-2 bg-[#A84A1A] hover:bg-[#8F3E15] text-white px-5 py-2.5 rounded-full font-bold text-[14px] shadow-sm transition-colors"
           >
             <Search className="w-4 h-4" />
@@ -66,7 +73,7 @@ export default function ManageBookings() {
               When you reserve a room it'll show up here with your move-in details, reference, and directions.
             </p>
             <Link 
-              to="/explore"
+              to={ROUTES.student.explore}
               className="flex items-center space-x-2 bg-[#A84A1A] hover:bg-[#8F3E15] text-white px-6 py-3 rounded-full font-bold text-[14px] shadow-sm transition-colors"
             >
               <Search className="w-4 h-4" />
@@ -103,13 +110,15 @@ export default function ManageBookings() {
             ) : (
             <div className="space-y-5">
               {bookings.map((booking) => (
-                <div key={booking.id} className="bg-card rounded-2xl shadow-sm p-4 flex flex-col md:flex-row gap-5 relative">
+                <div key={booking.id} onClick={() => navigate(ROUTES.student.booking(booking.id))} className="bg-card rounded-2xl shadow-sm p-4 flex flex-col md:flex-row gap-5 relative cursor-pointer hover:shadow-md transition-shadow">
                   
-                  {/* Thumbnail Placeholder */}
-                  <div className="w-full md:w-[240px] h-[160px] md:h-auto rounded-xl shrink-0 relative overflow-hidden bg-[repeating-linear-gradient(45deg,#E5D0BA,#E5D0BA_15px,#F1E8DC_15px,#F1E8DC_30px)] flex items-center justify-center border border-[#E5D0BA]/50">
-                    <div className="bg-white/90 dark:bg-background/90 text-[#8C8279] dark:text-muted-foreground backdrop-blur-sm px-4 py-1.5 rounded-full text-[10px] font-extrabold tracking-widest text-[#8C8279] dark:text-muted-foreground shadow-sm">
-                      HOSTEL
-                    </div>
+                  {/* Hostel photo */}
+                  <div className="w-full md:w-[240px] h-[160px] md:h-auto rounded-xl shrink-0 relative overflow-hidden bg-[#E5D0BA] border border-[#E5D0BA]/50">
+                    {booking.image ? (
+                      <img src={booking.image} alt={booking.hostelName} className="absolute inset-0 w-full h-full object-cover" />
+                    ) : (
+                      <div className="absolute inset-0 flex items-center justify-center text-[10px] font-extrabold tracking-widest text-[#8C8279] dark:text-muted-foreground">HOSTEL</div>
+                    )}
                   </div>
 
                   {/* Middle Content */}
@@ -159,34 +168,29 @@ export default function ManageBookings() {
 
                   {/* Right Actions */}
                   <div className="w-full md:w-[180px] shrink-0 border-t md:border-t-0 md:border-l border-[#F0EFEA] dark:border-border/40 pt-4 md:pt-0 md:pl-5 flex flex-col justify-center space-y-3">
-                    {booking.status === "CONFIRMED" ? (
-                      <>
-                        <button className="w-full bg-[#A84A1A] hover:bg-[#8F3E15] text-white py-2.5 rounded-full font-bold text-[13px] transition-colors shadow-sm">
-                          View booking
-                        </button>
-                        <button className="w-full bg-card border border-[#C8B09A] dark:border-border/40 text-[#A84A1A] hover:bg-[#F8F6F3] dark:hover:bg-muted py-2.5 rounded-full font-bold text-[13px] transition-colors flex items-center justify-center space-x-1.5">
-                          <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
-                          <span>Directions</span>
-                        </button>
-                      </>
-                    ) : booking.status === "CANCELLED" ? (
-                      <button className="w-full bg-card border border-[#C8B09A] dark:border-border/40 text-[#A84A1A] hover:bg-[#F8F6F3] dark:hover:bg-muted py-2.5 rounded-full font-bold text-[13px] transition-colors">
-                        View details
-                      </button>
-                    ) : (
-                      <>
-                        <button className="w-full bg-[#A84A1A] hover:bg-[#8F3E15] text-white py-2.5 rounded-full font-bold text-[13px] transition-colors shadow-sm">
-                          Complete payment
-                        </button>
-                        <button className="w-full bg-card border border-[#C8B09A] dark:border-border/40 text-[#A84A1A] hover:bg-[#F8F6F3] dark:hover:bg-muted py-2.5 rounded-full font-bold text-[13px] transition-colors">
-                          View details
-                        </button>
-                        {booking.expiresIn && (
-                          <p className="text-[10px] font-medium text-[#A29A91] dark:text-muted-foreground text-center mt-1">
-                            {booking.expiresIn}
-                          </p>
-                        )}
-                      </>
+                    <Link
+                      to={ROUTES.student.booking(booking.id)}
+                      onClick={(e) => e.stopPropagation()}
+                      className="w-full bg-[#A84A1A] hover:bg-[#8F3E15] text-white py-2.5 rounded-full font-bold text-[13px] transition-colors shadow-sm text-center"
+                    >
+                      {booking.status === "CONFIRMED" ? "View booking" : "View details"}
+                    </Link>
+                    {booking.status !== "CANCELLED" && (
+                      <a
+                        href={directionsUrl(booking.hostelName, booking.location)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                        className="w-full bg-card border border-[#C8B09A] dark:border-border/40 text-[#A84A1A] hover:bg-[#F8F6F3] dark:hover:bg-muted py-2.5 rounded-full font-bold text-[13px] transition-colors flex items-center justify-center space-x-1.5"
+                      >
+                        <svg className="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 17 4 12 9 7"/><path d="M20 18v-2a4 4 0 0 0-4-4H4"/></svg>
+                        <span>Directions</span>
+                      </a>
+                    )}
+                    {booking.expiresIn && (
+                      <p className="text-[10px] font-medium text-[#A29A91] dark:text-muted-foreground text-center mt-1">
+                        {booking.expiresIn}
+                      </p>
                     )}
                   </div>
                   
