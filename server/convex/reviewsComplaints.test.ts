@@ -38,7 +38,7 @@ describe("reviews", () => {
 
     const rows = await t.query(api.reviews.listByHostel, { hostelId: hostel.id, secret });
     expect(rows).toHaveLength(1);
-    expect(rows[0].USERS).toEqual({ email: student.email });
+    expect(rows[0].USERS).toMatchObject({ email: student.email });
 
     expect(await t.query(api.reviews.listByHostel, { secret })).toHaveLength(1);
     expect(await t.query(api.reviews.listByHostel, { hostelId: "bogus", secret })).toEqual([]);
@@ -67,6 +67,33 @@ describe("reviews", () => {
   });
 });
 
+describe("review upsert", () => {
+  it("replace_existing edits the student's review instead of adding another", async () => {
+    const t = convexTest(schema, modules);
+    const { student, hostel } = await scenario(t);
+    const first = await t.mutation(api.reviews.create, {
+      data: { rating: 3, comment: "ok", student_id: student.id, hostel_id: hostel.id, replace_existing: true }, secret,
+    });
+    const second = await t.mutation(api.reviews.create, {
+      data: { rating: 5, comment: "great", student_id: student.id, hostel_id: hostel.id, replace_existing: true }, secret,
+    });
+    expect(second.id).toBe(first.id);
+    const rows = await t.query(api.reviews.listByHostel, { hostelId: hostel.id, secret });
+    expect(rows).toHaveLength(1);
+    expect(rows[0].rating).toBe(5);
+    expect(rows[0].USERS.name).toBeDefined();
+  });
+
+  it("without the flag, reviews still stack (existing behaviour)", async () => {
+    const t = convexTest(schema, modules);
+    const { student, hostel } = await scenario(t);
+    for (const rating of [4, 5]) {
+      await t.mutation(api.reviews.create, { data: { rating, student_id: student.id, hostel_id: hostel.id }, secret });
+    }
+    expect(await t.query(api.reviews.listByHostel, { hostelId: hostel.id, secret })).toHaveLength(2);
+  });
+});
+
 describe("complaints", () => {
   it("create persists the supplied hostel_manager_id and forces status OPEN", async () => {
     const t = convexTest(schema, modules);
@@ -91,7 +118,7 @@ describe("complaints", () => {
     });
     const rows = await t.query(api.complaints.list, { secret });
     expect(rows).toHaveLength(1);
-    expect(rows[0].USERS).toEqual({ email: student.email, profile_complete: true });
+    expect(rows[0].USERS).toMatchObject({ email: student.email, profile_complete: true });
     expect(rows[0].HOSTEL).toEqual({ hostel_name: "Unity Hall" });
     expect(await t.query(api.complaints.list, { studentId: "bogus", secret })).toEqual([]);
   });
@@ -185,5 +212,37 @@ describe("complaints", () => {
     expect(
       await t.mutation(api.complaints.updateStatus, { id: "123", status: "RESOLVED", secret })
     ).toBeNull();
+  });
+
+  it("stores kind/subject, notifies the manager, and a reply notifies the student", async () => {
+    const t = convexTest(schema, modules);
+    const { manager, student, hostel } = await scenario(t);
+    const c = await t.mutation(api.complaints.create, {
+      data: { content: "Is parking included?", kind: "ENQUIRY", subject: "Parking", student_id: student.id,
+              hostel_id: hostel.id, hostel_manager_id: manager.id },
+      secret,
+    });
+    expect(c.kind).toBe("ENQUIRY");
+    expect(c.subject).toBe("Parking");
+
+    const mgrNotes = await t.query(api.notifications.listForUser, { userId: manager.id, secret });
+    expect(mgrNotes[0].type).toBe("enquiry_new");
+
+    const replied = await t.mutation(api.complaints.updateStatus, {
+      id: c.id, status: "RESOLVED", reply: "Yes, free parking.", secret,
+    });
+    expect(replied!.reply).toBe("Yes, free parking.");
+    expect(replied!.status).toBe("RESOLVED");
+    const stuNotes = await t.query(api.notifications.listForUser, { userId: student.id, secret });
+    expect(stuNotes[0].type).toBe("complaint_reply");
+  });
+
+  it("defaults old-style complaints to COMPLAINT kind", async () => {
+    const t = convexTest(schema, modules);
+    const { student, hostel } = await scenario(t);
+    const c = await t.mutation(api.complaints.create, {
+      data: { content: "No water", student_id: student.id, hostel_id: hostel.id }, secret,
+    });
+    expect(c.kind).toBe("COMPLAINT");
   });
 });

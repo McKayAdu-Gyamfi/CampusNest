@@ -2,6 +2,7 @@
 import { v } from "convex/values";
 import { toApiRow } from "./lib/toApiRow";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
+import { notify } from "./lib/notify";
 
 const complaintStatus = v.union(v.literal("OPEN"), v.literal("IN_PROGRESS"), v.literal("RESOLVED"));
 
@@ -9,7 +10,7 @@ async function withUser(ctx: any, complaint: any, includeHostel: boolean) {
   const row = toApiRow(complaint);
 
   const student = await ctx.db.get(complaint.student_id);
-  row.USERS = student ? { email: student.email, profile_complete: student.profile_complete } : null;
+  row.USERS = student ? { email: student.email, name: student.name, profile_complete: student.profile_complete } : null;
 
   if (includeHostel) {
     const hostel = await ctx.db.get(complaint.hostel_id);
@@ -83,9 +84,14 @@ export const create = secureMutation({ data: v.any() }, async (ctx, { data }) =>
     ? ctx.db.normalizeId("users", data.hostel_manager_id)
     : null;
 
+  const bookingId = data.booking_id ? ctx.db.normalizeId("bookings", data.booking_id) : null;
+
   const now = Date.now();
   const complaintId = await ctx.db.insert("complaints", {
     content: data.content,
+    kind: data.kind === "ENQUIRY" ? "ENQUIRY" : "COMPLAINT",
+    subject: data.subject || undefined,
+    booking_id: bookingId ?? undefined,
     status: "OPEN",
     student_id: studentId,
     hostel_manager_id: managerId ?? undefined,
@@ -93,17 +99,46 @@ export const create = secureMutation({ data: v.any() }, async (ctx, { data }) =>
     created_at: now,
     updated_at: now,
   });
+
+  // Tell the hostel's manager.
+  if (managerId) {
+    const student = await ctx.db.get(studentId);
+    const hostel = await ctx.db.get(hostelId);
+    const isEnquiry = data.kind === "ENQUIRY";
+    await notify(ctx, managerId, {
+      type: isEnquiry ? "enquiry_new" : "complaint_new",
+      title: isEnquiry ? "New enquiry" : "New complaint",
+      message: `${student?.name || student?.email || "A student"}${hostel ? ` (${hostel.hostel_name})` : ""}: ${data.subject || String(data.content).slice(0, 80)}`,
+      bookingId: bookingId ?? undefined,
+    });
+  }
   return toApiRow((await ctx.db.get(complaintId))!);
 });
 
 export const updateStatus = secureMutation(
-  { id: v.string(), status: complaintStatus },
-  async (ctx, { id, status }) => {
+  { id: v.string(), status: v.optional(complaintStatus), reply: v.optional(v.string()) },
+  async (ctx, { id, status, reply }) => {
     const complaintId = ctx.db.normalizeId("complaints", id);
     if (!complaintId) return null;
     const complaint = await ctx.db.get(complaintId);
     if (!complaint) return null;
-    await ctx.db.patch(complaintId, { status, updated_at: Date.now() });
+    const trimmed = reply?.trim();
+    const patch: Record<string, any> = { updated_at: Date.now() };
+    if (status) patch.status = status;
+    if (trimmed) { patch.reply = trimmed; patch.replied_at = Date.now(); }
+    await ctx.db.patch(complaintId, patch);
+
+    // Tell the student when their manager answers or resolves it.
+    if (trimmed || (status && status !== complaint.status)) {
+      const hostel = await ctx.db.get(complaint.hostel_id);
+      const what = complaint.kind === "ENQUIRY" ? "enquiry" : "complaint";
+      await notify(ctx, complaint.student_id, {
+        type: "complaint_reply",
+        title: trimmed ? "Reply to your " + what : `Your ${what} was ${String(status).toLowerCase().replace("_", " ")}`,
+        message: trimmed ? `${hostel?.hostel_name ?? "Your hostel"}: ${trimmed.slice(0, 100)}` : `${hostel?.hostel_name ?? "Your hostel"} updated the status of your ${what}.`,
+        bookingId: complaint.booking_id,
+      });
+    }
     return toApiRow((await ctx.db.get(complaintId))!);
   }
 );

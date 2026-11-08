@@ -2,6 +2,7 @@
 import { v } from "convex/values";
 import { toApiRow } from "./lib/toApiRow";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
+import { notify } from "./lib/notify";
 
 export const listByHostel = secureQuery({ hostelId: v.optional(v.string()) }, async (ctx, { hostelId }) => {
   let rows;
@@ -22,7 +23,7 @@ export const listByHostel = secureQuery({ hostelId: v.optional(v.string()) }, as
       row.USERS = null;
       if (review.student_id) {
         const student = await ctx.db.get(review.student_id);
-        if (student) row.USERS = { email: student.email };
+        if (student) row.USERS = { email: student.email, name: student.name };
       }
       return row;
     })
@@ -42,6 +43,21 @@ export const create = secureMutation({ data: v.any() }, async (ctx, { data }) =>
   if (data.student_id && !studentId) throw new Error("Student not found");
 
   const now = Date.now();
+
+  // A student's second review of the same hostel edits their latest one.
+  if (data.replace_existing && studentId) {
+    const mine = await ctx.db
+      .query("reviews")
+      .withIndex("by_hostel_id", (q: any) => q.eq("hostel_id", hostelId))
+      .order("desc")
+      .filter((q: any) => q.eq(q.field("student_id"), studentId))
+      .first();
+    if (mine) {
+      await ctx.db.patch(mine._id, { rating: data.rating, comment: data.comment ?? undefined, updated_at: now });
+      return toApiRow((await ctx.db.get(mine._id))!);
+    }
+  }
+
   const reviewId = await ctx.db.insert("reviews", {
     rating: data.rating,
     comment: data.comment ?? undefined,
@@ -50,5 +66,13 @@ export const create = secureMutation({ data: v.any() }, async (ctx, { data }) =>
     created_at: now,
     updated_at: now,
   });
+  const hostel = await ctx.db.get(hostelId);
+  if (hostel?.manager_id) {
+    await notify(ctx, hostel.manager_id, {
+      type: "new_review",
+      title: "New review",
+      message: `${hostel.hostel_name} received a ${data.rating}-star review.`,
+    });
+  }
   return toApiRow((await ctx.db.get(reviewId))!);
 });

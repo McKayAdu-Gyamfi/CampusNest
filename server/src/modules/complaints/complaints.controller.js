@@ -74,6 +74,10 @@ export const createComplaint = async (req, res, next) => {
       }
     }
 
+    if (req.user.user_type !== "STUDENT" && !req.body.student_id) {
+      return res.status(400).json({ success: false, message: "student_id is required" });
+    }
+
     const data = await cm(api.complaints.create, {
       data: {
         ...req.body,
@@ -94,7 +98,7 @@ export const createComplaint = async (req, res, next) => {
 export const updateComplaintStatus = async (req, res, next) => {
   try {
     const { id } = req.params;
-    const { status } = req.body;
+    const { status, reply } = req.body;
 
     const complaint = await cq(api.complaints.getByIdWithUser, { id });
 
@@ -108,7 +112,7 @@ export const updateComplaintStatus = async (req, res, next) => {
       return res.status(403).json({ success: false, message: "Forbidden: You do not manage the hostel for this complaint" });
     }
 
-    const data = await cm(api.complaints.updateStatus, { id, status });
+    const data = await cm(api.complaints.updateStatus, { id, status, reply });
 
     if (!data) {
       return res.status(404).json({ success: false, message: "Complaint not found" });

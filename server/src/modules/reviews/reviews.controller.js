@@ -36,7 +36,8 @@ export const createReview = async (req, res, next) => {
     }
 
     const data = await cm(api.reviews.create, {
-      data: { ...req.body, student_id: req.user.id },
+      // One review per student per hostel: a second submission edits the first.
+      data: { ...req.body, student_id: req.user.id, replace_existing: true },
     });
 
     res.status(201).json({ success: true, data });
