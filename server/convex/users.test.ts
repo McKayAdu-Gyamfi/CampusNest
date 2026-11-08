@@ -189,10 +189,10 @@ describe("users CRUD", () => {
     const t = convexTest(schema, modules);
     const user = await mkUser(t, "drop@test.com");
     const updated = await t.mutation(api.users.updateProfile, {
-      id: user.id, patch: { phone: "123", bogus: 1, course: "CS" }, secret,
+      id: user.id, patch: { favourite_colour: "red", bogus: 1, course: "CS" }, secret,
     });
     expect(updated!.course).toBe("CS");
-    expect((updated as any).phone).toBeUndefined();
+    expect((updated as any).favourite_colour).toBeUndefined();
   });
 
   it("updateProfile accepts a valid current_room_id and clears it with null", async () => {

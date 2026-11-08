@@ -21,6 +21,24 @@ export default defineSchema({
     course: v.optional(v.string()),
     current_room_id: v.optional(v.id("rooms")),
     payment_details: v.optional(v.string()),
+    // Contact + identity (all roles)
+    phone: v.optional(v.string()),
+    // Student
+    institution: v.optional(v.string()),
+    level: v.optional(v.string()),
+    gender: v.optional(v.string()),
+    date_of_birth: v.optional(v.string()),
+    emergency_contact_name: v.optional(v.string()),
+    emergency_contact_phone: v.optional(v.string()),
+    // Manager
+    business_name: v.optional(v.string()),
+    ghana_card_number: v.optional(v.string()),
+    payout_method: v.optional(v.union(v.literal("momo"), v.literal("bank"))),
+    momo_network: v.optional(v.string()),
+    momo_number: v.optional(v.string()),
+    bank_name: v.optional(v.string()),
+    bank_account_number: v.optional(v.string()),
+    bank_account_name: v.optional(v.string()),
     // better-auth always writes these on every model; stored as epoch ms
     // (Convex has no native Date type) via the adapter's date transform.
     // Optional in the schema (not required) so Tasks 3-6's own unit tests,
@@ -149,12 +167,28 @@ export default defineSchema({
   }).index("by_hostel_id", ["hostel_id"])
     .index("by_student_id", ["student_id"]),
 
+  // In-app notifications, written by the mutations that cause them (new
+  // booking, approval, review...) so they always reflect real database events.
+  notifications: defineTable({
+    user_id: v.id("users"),
+    type: v.string(),
+    title: v.string(),
+    message: v.string(),
+    read: v.boolean(),
+    booking_id: v.optional(v.id("bookings")),
+    created_at: v.number(),
+  }).index("by_user_id", ["user_id", "created_at"]),
+
   bookings: defineTable({
     check_in_date: v.number(),
     check_out_date: v.number(),
     status: v.union(v.literal("PENDING"), v.literal("CONFIRMED"), v.literal("CANCELLED"), v.literal("CHECKED_OUT")),
     student_id: v.id("users"),
     room_id: v.id("rooms"),
+    // Set when the student paid through Paystack: the verified transaction
+    // reference and the amount actually charged (GHS).
+    payment_reference: v.optional(v.string()),
+    amount_paid: v.optional(v.number()),
     created_at: v.number(),
     updated_at: v.number(),
   }).index("by_student_id", ["student_id"])
@@ -190,6 +224,13 @@ export default defineSchema({
 
   complaints: defineTable({
     content: v.string(),
+    // Complaint (something is wrong) or enquiry (a question). Older rows have none.
+    kind: v.optional(v.union(v.literal("COMPLAINT"), v.literal("ENQUIRY"))),
+    subject: v.optional(v.string()),
+    booking_id: v.optional(v.id("bookings")),
+    // The manager's answer to the student.
+    reply: v.optional(v.string()),
+    replied_at: v.optional(v.number()),
     status: v.union(v.literal("OPEN"), v.literal("IN_PROGRESS"), v.literal("RESOLVED")),
     student_id: v.id("users"),
     hostel_manager_id: v.optional(v.id("users")),

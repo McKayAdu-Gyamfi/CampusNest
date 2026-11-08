@@ -111,7 +111,10 @@ export const getProfileComplete = secureQuery({ id: v.string() }, async (ctx, { 
 
 // Allow-list of patchable fields; unknown keys are silently dropped.
 const PATCHABLE_REQUIRED = ["name", "user_type", "profile_complete", "emailVerified"];
-const PATCHABLE_OPTIONAL = ["image", "student_id", "course", "payment_details", "current_room_id"];
+const PATCHABLE_OPTIONAL = ["image", "student_id", "course", "payment_details", "current_room_id",
+  "phone", "institution", "level", "gender", "date_of_birth", "emergency_contact_name", "emergency_contact_phone",
+  "business_name", "ghana_card_number", "payout_method", "momo_network", "momo_number",
+  "bank_name", "bank_account_number", "bank_account_name"];
 
 export const updateProfile = secureMutation({ id: v.string(), patch: v.any() }, async (ctx, { id, patch }) => {
   const userId = ctx.db.normalizeId("users", id);

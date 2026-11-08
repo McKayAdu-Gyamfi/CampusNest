@@ -53,7 +53,7 @@ export const requireCompleteProfile = async (req, res, next) => {
 
     if (!user.profile_complete && req.user.user_type === "STUDENT") {
       console.error("[Auth Middleware - requireCompleteProfile] Error: Profile not complete for STUDENT");
-      return res.status(403).json({ success: false, message: "Please complete your profile before making a booking." });
+      return res.status(403).json({ success: false, code: "PROFILE_INCOMPLETE", message: "Please complete your profile before making a booking." });
     }
 
     console.log("[Auth Middleware - requireCompleteProfile] Success");

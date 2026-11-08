@@ -1,5 +1,6 @@
 import { cq, cm } from "../../config/convexClient.js";
 import { api } from "../../../convex/_generated/api.js";
+import { isProfileComplete } from "./profileCompleteness.js";
 
 class UserServiceError extends Error {
   constructor(message, statusCode) {
@@ -16,22 +17,16 @@ export const getMe = async (userId) => {
 };
 
 export const updateMe = async (userId, updates, userType) => {
-  let patch;
-  if (userType === "HOSTEL_MANAGER") {
-    const { user_type, student_id, course, profile_complete, ...safeUpdates } = updates;
-    patch = safeUpdates;
-  } else if (userType === "STUDENT") {
-    // user_type is stripped here as well as in the branches below: zod
-    // already rejects it, but this is a self-escalation path, so the three
-    // branches stay symmetric rather than relying on one layer.
-    const { user_type, ...safeUpdates } = updates;
-    const current = await cq(api.users.getMeWithRoom, { id: userId });
-    if (!current) throw new UserServiceError("User profile not found in database", 404);
-    const merged = { student_id: current.student_id, course: current.course, ...safeUpdates };
-    patch = { ...safeUpdates, profile_complete: !!(merged.student_id && merged.course) };
-  } else {
-    const { user_type, ...safeUpdates } = updates;
-    patch = safeUpdates;
+  const { user_type, profile_complete, ...safeUpdates } = updates;
+  const current = await cq(api.users.getMeWithRoom, { id: userId });
+  if (!current) throw new UserServiceError("User profile not found in database", 404);
+  // Empty string clears a field. Completeness is always derived, never client-set.
+  const clean = Object.fromEntries(Object.entries(safeUpdates).map(([k, v]) => [k, v === "" ? null : v]));
+  const patch = { ...clean };
+  if (userType === "STUDENT" || userType === "HOSTEL_MANAGER") {
+    const merged = { ...current };
+    for (const [k, v] of Object.entries(clean)) merged[k] = v;
+    patch.profile_complete = isProfileComplete(merged, userType);
   }
 
   const updated = await cm(api.users.updateProfile, { id: userId, patch });

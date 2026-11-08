@@ -1,5 +1,20 @@
 import { z } from "zod";
 
+// Optional free-text profile fields. Empty string clears the value.
+const text = (max = 120) => z.string().trim().max(max).optional();
+const phone = z.string().trim().regex(/^\+?[0-9 ()-]{7,20}$/, "Enter a valid phone number").or(z.literal("")).optional();
+export const profileFields = {
+  phone,
+  institution: text(), level: text(20), gender: z.enum(["Female", "Male", "Other", ""]).optional(),
+  date_of_birth: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD").or(z.literal("")).optional(),
+  emergency_contact_name: text(), emergency_contact_phone: phone,
+  business_name: text(), ghana_card_number: text(30),
+  payout_method: z.enum(["momo", "bank"]).optional(),
+  momo_network: text(30), momo_number: phone,
+  bank_name: text(), bank_account_number: z.string().trim().regex(/^\d{6,20}$/, "Account number must be digits").or(z.literal("")).optional(),
+  bank_account_name: text(),
+};
+
 export const updateUserProfileSchema = z.object({
   body: z.object({
     course: z.string().optional(),
@@ -9,7 +24,8 @@ export const updateUserProfileSchema = z.object({
     // move them into any room with no booking, approval, or payment.
     student_id: z.string().optional(), // School issued student ID
     name: z.string().optional(), // Common
-    payment_details: z.string().optional() // Manager specific
+    payment_details: z.string().optional(), // Manager specific
+    ...profileFields,
   })
 });
 
