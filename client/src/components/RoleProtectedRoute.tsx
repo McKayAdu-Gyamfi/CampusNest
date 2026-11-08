@@ -1,16 +1,12 @@
-import { Navigate } from "react-router-dom";
+import { Navigate, useLocation } from "react-router-dom";
 import { useAuth, type FrontendRole } from "@/contexts/AuthContext";
+import { ROLE_HOME, ROLE_LOGIN } from "@/lib/routes";
 
 export type UserRole = FrontendRole;
 
-const ROLE_HOME: Record<FrontendRole, string> = {
-  student: "/",
-  manager: "/manager",
-  admin: "/admin",
-};
-
 export default function RoleProtectedRoute({ allow, children }: { allow: FrontendRole[]; children: React.ReactNode }) {
   const { user, isLoading } = useAuth();
+  const location = useLocation();
 
   if (isLoading) {
     return (
@@ -21,7 +17,8 @@ export default function RoleProtectedRoute({ allow, children }: { allow: Fronten
   }
 
   if (!user) {
-    return <Navigate to="/login" replace />;
+    // Send them to the sign-in page for this area, and remember where they were headed.
+    return <Navigate to={ROLE_LOGIN[allow[0]]} replace state={{ from: location.pathname + location.search }} />;
   }
 
   if (!allow.includes(user.role)) {

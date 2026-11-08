@@ -1,22 +1,23 @@
 import { Link, useLocation } from "react-router-dom";
+import { ROUTES } from "@/lib/routes";
 import { LayoutDashboard, Building2, CalendarDays, Users2, User } from "lucide-react";
 
 export default function ManagerBottomNav() {
   const { pathname } = useLocation();
 
   const navItems = [
-    { name: "Dashboard", path: "/manager", icon: LayoutDashboard },
-    { name: "Bookings", path: "/manager/bookings", icon: CalendarDays },
-    { name: "Property", path: "/manager/properties", icon: Building2 },
-    { name: "Clients", path: "/manager/clients", icon: Users2 },
-    { name: "Profile", path: "/manager/profile", icon: User },
+    { name: "Dashboard", path: ROUTES.manager.dashboard, icon: LayoutDashboard },
+    { name: "Bookings", path: ROUTES.manager.bookings, icon: CalendarDays },
+    { name: "Property", path: ROUTES.manager.properties, icon: Building2 },
+    { name: "Clients", path: ROUTES.manager.clients, icon: Users2 },
+    { name: "Profile", path: ROUTES.manager.profile, icon: User },
   ];
 
   return (
     <div className="lg:hidden fixed bottom-0 left-0 w-full h-[84px] bg-[#F8F6F3] border-t border-border/40 z-[100] px-4 flex items-center justify-between pb-safe shadow-[0_-10px_40px_rgba(0,0,0,0.05)]">
       {navItems.map((item) => {
         const Icon = item.icon;
-        const isActive = pathname === item.path || (item.path !== '/manager' && item.path !== '/manager/profile' && pathname.startsWith(item.path));
+        const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
         
         return (
           <Link 

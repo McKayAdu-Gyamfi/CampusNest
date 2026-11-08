@@ -1,21 +1,24 @@
 import { Link, useLocation } from "react-router-dom";
-import { LayoutDashboard, Building2, CalendarDays, Users2, Receipt, LogOut } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
+import { LayoutDashboard, Building2, CalendarDays, Users2, Receipt, MessageSquare, LogOut } from "lucide-react";
 import kaya from "../assets/Kaya.png";
-import { MANAGER_BOOKINGS } from "@/data/managerBookings";
+import { useManagerBookings } from "@/data/managerBookings";
 import { useAuth } from "@/contexts/AuthContext";
 
 export default function ManagerSidebar() {
   const { pathname } = useLocation();
   const { signOut } = useAuth();
-  const pendingCount = MANAGER_BOOKINGS.filter((b) => b.status === "Pending").length;
+  const { bookings } = useManagerBookings();
+  const pendingCount = bookings.filter((b) => b.status === "Pending").length;
 
   // Define navigation items
   const navItems = [
-    { path: "/manager", label: "Dashboard", icon: LayoutDashboard },
-    { path: "/manager/properties", label: "My properties", icon: Building2 },
-    { path: "/manager/bookings", label: "Bookings", icon: CalendarDays, badge: pendingCount },
-    { path: "/manager/clients", label: "Clients", icon: Users2 },
-    { path: "/manager/payouts", label: "Payouts", icon: Receipt },
+    { path: ROUTES.manager.dashboard, label: "Dashboard", icon: LayoutDashboard },
+    { path: ROUTES.manager.properties, label: "My properties", icon: Building2 },
+    { path: ROUTES.manager.bookings, label: "Bookings", icon: CalendarDays, badge: pendingCount },
+    { path: ROUTES.manager.clients, label: "Clients", icon: Users2 },
+    { path: ROUTES.manager.messages, label: "Messages", icon: MessageSquare },
+    { path: ROUTES.manager.payouts, label: "Payouts", icon: Receipt },
   ];
 
   return (
@@ -35,7 +38,7 @@ export default function ManagerSidebar() {
       <nav className="flex-1 flex flex-col space-y-1.5 px-4">
         {navItems.map((item) => {
           // Dashboard route should exact match so other routes don't highlight it
-          const isActive = item.path === "/manager" ? pathname === "/manager" : pathname.startsWith(item.path);
+          const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
           const Icon = item.icon;
           
           return (
@@ -71,7 +74,7 @@ export default function ManagerSidebar() {
       {/* User Profile */}
       <div className="px-5 mt-auto pt-5 border-t border-border/20">
         <div className="flex items-center p-2 rounded-xl hover:bg-primary/10 w-full relative group">
-          <Link to="/manager/profile" className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity flex-1">
+          <Link to={ROUTES.manager.profile} className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity flex-1">
             <div className="w-10 h-10 rounded-full flex items-center justify-center bg-[#463C38] text-white font-bold text-[13px] shrink-0">
               KO
             </div>
@@ -81,7 +84,7 @@ export default function ManagerSidebar() {
             </div>
           </Link>
           <Link 
-            to="/login"
+            to={ROUTES.manager.login}
             title="Log out"
             onClick={() => { signOut(); }}
             className="absolute right-2 z-10 p-2 rounded-full hover:bg-red-500/10 cursor-pointer text-muted-foreground hover:text-red-500 transition-colors"

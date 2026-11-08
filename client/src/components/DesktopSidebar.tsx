@@ -1,10 +1,12 @@
 import { Link, useLocation } from "react-router-dom";
+import { ROUTES } from "@/lib/routes";
 import Logo from "./Logo";
 import { Home, Compass, Bookmark, BedDouble, User, LogOut, Moon } from "lucide-react";
 // import { TygerAvatar } from 'tyger-avatar';
 import { useTheme } from "./theme-provider";
 import { useAuth } from "@/contexts/AuthContext";
 import { getInitials } from "@/lib/utils";
+import { useSavedCount } from "@/lib/savedHostels";
 
 export default function DesktopSidebar() {
   const { pathname } = useLocation();
@@ -13,14 +15,15 @@ export default function DesktopSidebar() {
   const { user, signOut } = useAuth();
   const userName = user?.name || user?.email || "";
   const initials = getInitials(userName);
+  const savedCount = useSavedCount();
 
   // Define navigation items
   const navItems = [
-    { path: "/", label: "Home", icon: Home },
-    { path: "/explore", label: "Explore", icon: Compass },
-    { path: "/saved", label: "Saved", icon: Bookmark },
-    { path: "/manage-bookings", label: "Bookings", icon: BedDouble },
-    { path: "/profile", label: "Account", icon: User },
+    { path: ROUTES.student.home, label: "Home", icon: Home },
+    { path: ROUTES.student.explore, label: "Explore", icon: Compass },
+    { path: ROUTES.student.saved, label: "Saved", icon: Bookmark },
+    { path: ROUTES.student.bookings, label: "Bookings", icon: BedDouble },
+    { path: ROUTES.student.profile, label: "Account", icon: User },
   ];
 
   return (
@@ -54,8 +57,16 @@ export default function DesktopSidebar() {
                 <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-6 bg-[#C56A30] rounded-r-md" />
               )}
               
-              <Icon className={`w-6 h-6 shrink-0 ${isActive ? 'text-canyon' : 'text-[#8C8A88] dark:text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 2} />
+              <span className="relative shrink-0">
+                <Icon className={`w-6 h-6 ${isActive ? 'text-canyon' : 'text-[#8C8A88] dark:text-muted-foreground'}`} strokeWidth={isActive ? 2.5 : 2} />
+                {item.path === "/saved" && savedCount > 0 && (
+                  <span aria-hidden className="absolute -top-2 -right-2.5 min-w-[18px] h-[18px] px-1 rounded-full bg-[#C56A30] text-white text-[10px] font-extrabold flex items-center justify-center leading-none group-hover:hidden">{savedCount > 99 ? "99+" : savedCount}</span>
+                )}
+              </span>
               <span className="opacity-0 -translate-x-4 group-hover:opacity-100 group-hover:translate-x-0 transition-all duration-300 whitespace-nowrap">{item.label}</span>
+              {item.path === "/saved" && savedCount > 0 && (
+                <span aria-label={`${savedCount} saved`} className="ml-auto hidden group-hover:flex min-w-[24px] h-6 px-2 rounded-full bg-[#C56A30] text-white text-[12px] font-extrabold items-center justify-center">{savedCount > 99 ? "99+" : savedCount}</span>
+              )}
             </Link>
           );
         })}
@@ -73,12 +84,12 @@ export default function DesktopSidebar() {
             onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
             className={`w-11 h-6 rounded-full transition-colors flex items-center px-1 ${theme === 'dark' ? 'bg-[#4A3A31]' : 'bg-[#E5E0D8]'}`}
           >
-            <div className={`w-4 h-4 rounded-full bg-white transition-transform ${theme === 'dark' ? 'translate-x-5' : 'translate-x-0'}`} />
+            <div className={`w-4 h-4 rounded-full bg-white dark:bg-card transition-transform ${theme === 'dark' ? 'translate-x-5' : 'translate-x-0'}`} />
           </button>
         </div>
 
         <div className="flex items-center justify-between">
-          <Link to="/profile" className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity">
+          <Link to={ROUTES.student.profile} className="flex items-center space-x-3 cursor-pointer hover:opacity-80 transition-opacity">
             <div className="w-12 h-12 ring-2 ring-background flex items-center justify-center bg-[#E5D0BA] shadow-sm rounded-full overflow-hidden p-0 shrink-0">
               {/* userAvatar?.startsWith("Tr") ? (
                  <TygerAvatar name={userAvatar as any} size="lg" />
@@ -95,7 +106,7 @@ export default function DesktopSidebar() {
             </div>
           </Link>
           <Link 
-            to="/login" 
+            to={ROUTES.student.login} 
             title="Log out"
             onClick={() => { signOut(); }}
             className="opacity-0 group-hover:opacity-100 transition-all duration-300 text-muted-foreground hover:text-red-500 p-2 rounded-full hover:bg-red-500/10 cursor-pointer"

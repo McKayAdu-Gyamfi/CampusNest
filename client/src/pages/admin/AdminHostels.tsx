@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ROUTES } from "@/lib/routes";
 import { Plus, Bell, Compass, Star } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -142,7 +143,7 @@ export default function AdminHostels() {
                       </div>
                     ) : (
                       <div className="inline-flex items-center space-x-3">
-                        <Link to="/admin/room-tours" className="inline-flex items-center space-x-1 text-xs font-extrabold text-[#C56A30] hover:underline">
+                        <Link to={ROUTES.admin.roomTours} className="inline-flex items-center space-x-1 text-xs font-extrabold text-[#C56A30] hover:underline">
                           <Compass className="w-3.5 h-3.5" />
                           <span>Room tour</span>
                         </Link>

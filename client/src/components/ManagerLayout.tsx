@@ -10,7 +10,7 @@ export default function ManagerLayout() {
     window.scrollTo({ top: 0, left: 0, behavior: "instant" });
   }, [pathname]);
 
-  const hideBottomNav = pathname.includes('cancel-refund');
+  const hideBottomNav = pathname.endsWith('/cancel');
 
   return (
     <div className="flex min-h-screen bg-[#F0EFEA] text-foreground">

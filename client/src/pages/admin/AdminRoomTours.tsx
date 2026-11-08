@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { ROUTES } from "@/lib/routes";
 import { ChevronLeft, Plus, Move, RotateCcw, ChevronRight } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -18,7 +19,7 @@ export default function AdminRoomTours() {
       {/* Top Header Bar */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pb-6 mb-6 border-b border-solid border-border/80">
         <div className="flex items-center space-x-3">
-          <Link to="/admin/hostels" className="w-10 h-10 rounded-full bg-card border border-border/50 flex items-center justify-center text-foreground hover:bg-accent transition-colors">
+          <Link to={ROUTES.admin.hostels} className="w-10 h-10 rounded-full bg-card border border-border/50 flex items-center justify-center text-foreground hover:bg-accent transition-colors">
             <ChevronLeft className="w-5 h-5" />
           </Link>
           <div>

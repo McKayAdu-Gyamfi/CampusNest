@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { ROUTES } from "@/lib/routes";
 import { GraduationCap, FileText, BedDouble, Banknote, Bell } from "lucide-react";
 import { Link } from "react-router-dom";
 import { getAdminStats, formatGHS, errorMessage, type AdminStats } from "@/lib/adminApi";
@@ -133,7 +134,7 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                 </div>
-                <Link to="/admin/hostels" className="px-4 py-2 bg-[#C56A30] hover:bg-[#b05b26] text-white font-extrabold text-xs rounded-full transition-colors shrink-0">
+                <Link to={ROUTES.admin.hostels} className="px-4 py-2 bg-[#C56A30] hover:bg-[#b05b26] text-white font-extrabold text-xs rounded-full transition-colors shrink-0">
                   Review
                 </Link>
               </div>

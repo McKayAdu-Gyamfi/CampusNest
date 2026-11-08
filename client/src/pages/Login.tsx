@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { Shield, Eye, EyeOff, CheckCircle, Monitor, BookOpen, Search, ChevronLeft } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Navigate, useLocation, useNavigate } from "react-router-dom";
 import Logo from "@/components/Logo";
 import { Input } from "@/components/ui/input";
 import { signUpStudent, signInEmail, registerManager } from "@/lib/auth";
@@ -8,6 +8,7 @@ import { ApiError } from "@/lib/apiClient";
 import { useAuth } from "@/contexts/AuthContext";
 import { getInitials } from "@/lib/utils";
 import { useComingSoon } from "@/contexts/ComingSoonContext";
+import { authPath, landingFor } from "@/lib/routes";
 
 // import { TygerAvatar } from 'tyger-avatar';
 
@@ -22,9 +23,15 @@ const ROLES = [
   { id: "manager", label: "Manager", icon: Shield },
 ] as const;
 
-export default function Login() {
-  const [step, setStep] = useState<"institution" | "login" | "avatar">("institution");
-  const [role, setRole] = useState<"student" | "manager">("student");
+interface LoginProps {
+  /** Which sign-in page this is: `/login`, `/manager/login`, ... */
+  role: "student" | "manager";
+  mode: "signin" | "signup";
+}
+
+export default function Login({ role, mode: authMode }: LoginProps) {
+  // Students pick their school first; managers go straight to the form.
+  const [step, setStep] = useState<"institution" | "login" | "avatar">(role === "student" ? "institution" : "login");
   const [selectedAvatar, setSelectedAvatar] = useState<string | null>(null);
   const [institutionQuery, setInstitutionQuery] = useState("");
   const [selectedInstitution, setSelectedInstitution] = useState("");
@@ -35,11 +42,15 @@ export default function Login() {
   const [formError, setFormError] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const navigate = useNavigate();
-  const { refetch } = useAuth();
+  const location = useLocation();
+  const { user, refetch } = useAuth();
+  const from = (location.state as { from?: string } | null)?.from;
   const { showComingSoon } = useComingSoon();
 
   const [activeSlide, setActiveSlide] = useState(0);
-  const [authMode, setAuthMode] = useState<'signup' | 'signin'>('signin');
+  // The mode and role live in the URL, so switching them is a navigation (back button works).
+  const setAuthMode = (m: 'signup' | 'signin') => navigate(authPath(role, m), { replace: true, state: location.state });
+  const switchRole = (r: 'student' | 'manager') => navigate(authPath(r, 'signin'), { state: location.state });
   const [showMobileForm, setShowMobileForm] = useState(false);
 
   useEffect(() => {
@@ -68,45 +79,25 @@ export default function Login() {
     setIsSubmitting(true);
 
     try {
-      if (role === "manager") {
-        if (authMode === "signup") {
-          // registerManager doesn't establish a session on its own
-          // (server has autoSignIn disabled) — sign in right after.
-          await registerManager(email, password, fullName || undefined);
-          await signInEmail(email, password);
-        } else {
-          await signInEmail(email, password);
-        }
-        const authedUser = await refetch();
-        if (!authedUser) {
-          setFormError("Signed in, but couldn't load your account. Please try again.");
-          return;
-        }
-        navigate("/manager");
-        return;
-      }
-
-      // Student path
       if (authMode === "signup") {
-        // signUpStudent doesn't establish a session on its own
-        // (server has autoSignIn disabled) — sign in right after.
-        await signUpStudent(email, password, fullName || undefined);
-        await signInEmail(email, password);
-      } else {
-        await signInEmail(email, password);
+        // Sign-up doesn't establish a session on its own (autoSignIn is off):
+        // sign in right after. Only /manager/signup can create a manager.
+        if (role === "manager") await registerManager(email, password, fullName || undefined);
+        else await signUpStudent(email, password, fullName || undefined);
       }
+      await signInEmail(email, password);
       const authedUser = await refetch();
       if (!authedUser) {
         setFormError("Signed in, but couldn't load your account. Please try again.");
         return;
       }
 
-      if (authMode === "signup") {
-        // New account — continue to the (cosmetic, frontend-only) avatar
-        // picker before landing on the home page.
+      if (authMode === "signup" && role === "student") {
+        // New student: continue to the (cosmetic) avatar picker before landing.
         setStep("avatar");
       } else {
-        navigate("/");
+        // Back to the page they were trying to reach, or their own home.
+        navigate(landingFor(authedUser.role, from), { replace: true });
       }
     } catch (err) {
       if (err instanceof ApiError) {
@@ -126,8 +117,14 @@ export default function Login() {
     if (selectedAvatar) {
       localStorage.setItem("userAvatar", selectedAvatar);
     }
-    navigate("/");
+    navigate(landingFor("student", from), { replace: true });
   };
+
+  // Already signed in: there's nothing to do here. (Not while submitting, so a
+  // new student still gets to the avatar step.)
+  if (user?.id && step !== "avatar" && !isSubmitting) {
+    return <Navigate to={landingFor(user.role, from)} replace />;
+  }
 
   if (step === "institution") {
     return (
@@ -174,7 +171,7 @@ export default function Login() {
                   <button
                     key={r.id}
                     type="button"
-                    onClick={() => setRole(r.id)}
+                    onClick={() => switchRole(r.id)}
                     className={`flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-full text-[13px] font-bold transition-all cursor-pointer ${
                       isActive ? "bg-white text-[#463C38] shadow-sm" : "text-[#8C8279] hover:text-[#463C38]"
                     }`}
@@ -661,6 +658,14 @@ export default function Login() {
                 </button>
               </>
             )}
+          </p>
+
+          {/* Other role's sign-in */}
+          <p className="text-center text-[12px] text-[#8C8279] mt-4 font-medium">
+            {role === "manager" ? "Looking for a room? " : "Run a hostel? "}
+            <button type="button" onClick={() => switchRole(role === "manager" ? "student" : "manager")} className="font-semibold text-canyon hover:underline cursor-pointer">
+              {role === "manager" ? "Student sign in" : "Manager sign in"}
+            </button>
           </p>
 
           {/* Terms footer (only on signup) */}

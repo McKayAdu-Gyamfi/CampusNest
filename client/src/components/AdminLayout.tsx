@@ -1,4 +1,5 @@
 import { Link, useLocation, useNavigate, Outlet } from "react-router-dom";
+import { ROUTES } from "@/lib/routes";
 import { LayoutGrid, Users, Building, GraduationCap, Box, Sun, ArrowLeft } from "lucide-react";
 import Logo from "./Logo";
 import AdminBottomNav from "./AdminBottomNav";
@@ -11,16 +12,16 @@ export default function AdminLayout() {
 
   const handleExitAdmin = async () => {
     await signOut();
-    navigate("/login");
+    navigate(ROUTES.admin.login);
   };
 
   const navItems = [
-    { path: "/admin", label: "Dashboard", icon: LayoutGrid },
-    { path: "/admin/users", label: "Users", icon: Users },
-    { path: "/admin/hostels", label: "Hostels", icon: Building },
-    { path: "/admin/schools", label: "Schools", icon: GraduationCap },
-    { path: "/admin/room-tours", label: "Room tours", icon: Box },
-    { path: "/admin/settings", label: "Settings", icon: Sun },
+    { path: ROUTES.admin.dashboard, label: "Dashboard", icon: LayoutGrid },
+    { path: ROUTES.admin.users, label: "Users", icon: Users },
+    { path: ROUTES.admin.hostels, label: "Hostels", icon: Building },
+    { path: ROUTES.admin.schools, label: "Schools", icon: GraduationCap },
+    { path: ROUTES.admin.roomTours, label: "Room tours", icon: Box },
+    { path: ROUTES.admin.settings, label: "Settings", icon: Sun },
   ];
 
   return (
@@ -44,7 +45,7 @@ export default function AdminLayout() {
         {/* Navigation Items */}
         <nav className="flex-1 space-y-1.5">
           {navItems.map((item) => {
-            const isActive = pathname === item.path || (item.path !== "/admin" && pathname.startsWith(item.path));
+            const isActive = pathname === item.path || pathname.startsWith(item.path + "/");
             const Icon = item.icon;
 
             return (

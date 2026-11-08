@@ -1,4 +1,5 @@
 import Logo from "@/components/Logo";
+import { ROUTES } from "@/lib/routes";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import { Link } from "react-router-dom";
 // import { TygerAvatar } from 'tyger-avatar';
@@ -23,7 +24,7 @@ export default function TopNav() {
           <Moon className="w-5 h-5" />
         </button>
         <NotificationsDropdown />
-        <Link to="/profile">
+        <Link to={ROUTES.student.profile}>
           <div className="w-10 h-10 ring-2 ring-background flex items-center justify-center bg-[#E5D0BA] shadow-sm cursor-pointer hover:opacity-80 transition-opacity rounded-full overflow-hidden p-0.5">
             {/* {userAvatar?.startsWith("Tr") ? (
                <TygerAvatar name={userAvatar as any} size="lg" />
