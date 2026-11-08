@@ -4,6 +4,8 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { Maximize, Minimize, X, Hand, Scaling, Ruler, ZoomIn, ZoomOut } from "lucide-react";
 import { useBookings } from "@/contexts/BookingContext";
 import { DEMO_TOUR_CONFIG } from "@/lib/demoTour";
+import { apiFetch } from "@/lib/apiClient";
+import { buildTourConfig } from "@/lib/roomTour";
 
 export default function LivePreview() {
   const iframeRef = useRef<HTMLIFrameElement>(null);
@@ -27,7 +29,31 @@ export default function LivePreview() {
     };
   }, []);
 
-  const tourConfig = DEMO_TOUR_CONFIG;
+  // The hostel's own tour when an admin has created one; otherwise the sample.
+  const [tourConfig, setTourConfig] = useState<Record<string, unknown>>(DEMO_TOUR_CONFIG);
+  const iframeLoaded = useRef(false);
+  const hostelId: string | undefined = summary?.returnToHostel;
+  useEffect(() => {
+    if (!hostelId) return;
+    let cancelled = false;
+    (async () => {
+      try {
+        const hostel = await apiFetch<{ ROOM: { id: string; price_per_bed: number; tour_scene_count?: number }[] }>(`/hostels/${hostelId}`);
+        const withTour = hostel.ROOM.filter((r) => (r.tour_scene_count ?? 0) > 0);
+        if (withTour.length === 0) return;
+        // Prefer the room whose price matches what the student is booking.
+        const best = withTour.reduce((a, b) => Math.abs(b.price_per_bed - (summary?.price ?? 0)) < Math.abs(a.price_per_bed - (summary?.price ?? 0)) ? b : a);
+        const room = await apiFetch<{ ROOM_TOUR_SCENES: { scene_name: string; scene_config_url: string }[] }>(`/rooms/${best.id}`);
+        const config = await buildTourConfig(room.ROOM_TOUR_SCENES);
+        if (!cancelled && config) setTourConfig(config);
+      } catch { /* keep the sample tour */ }
+    })();
+    return () => { cancelled = true; };
+  }, [hostelId, summary?.price]);
+  // If the real tour arrives after the viewer has loaded, hand it over.
+  useEffect(() => {
+    if (iframeLoaded.current) iframeRef.current?.contentWindow?.postMessage({ type: "pannellum_config", config: tourConfig }, "*");
+  }, [tourConfig]);
 
   const handleClose = () => {
     if (location.state?.returnPath) {
@@ -77,6 +103,7 @@ export default function LivePreview() {
           style={{ borderStyle: "none" }} 
           src="/tour.html"
           onLoad={() => {
+            iframeLoaded.current = true;
             iframeRef.current?.contentWindow?.postMessage({ type: 'pannellum_config', config: tourConfig }, '*');
           }}
         />

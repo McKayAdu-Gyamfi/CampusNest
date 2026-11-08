@@ -216,6 +216,7 @@ export default function BookingDetail() {
                       state: {
                         // LivePreview's close button comes back here.
                         returnPath: ROUTES.student.booking(booking.id),
+                        returnToHostel: booking.hostelId,
                         hostelName: booking.hostelName,
                         location: booking.location,
                         image: booking.image,
