@@ -12,6 +12,12 @@ export interface Hostel {
   priceFreq: string;
   rating: number;
   availability: "AVAILABLE" | "FEW ROOMS LEFT" | "FULL";
+  /** Rooms still open for booking, and rooms listed in total. */
+  roomsAvailable: number;
+  roomsTotal: number;
+  /** Beds across all rooms, and how many are still free. */
+  bedsTotal: number;
+  bedsFree: number;
   amenities: string[];
   image: string;
   gallery: string[];
@@ -28,7 +34,7 @@ interface ApiHostel {
 }
 
 interface ApiHostelDetail extends ApiHostel {
-  ROOM: { price_per_bed: number }[];
+  ROOM: { price_per_bed: number; is_available?: boolean; capacity?: number; current_occupancy?: number }[];
   HOSTEL_IMAGE_URLS: { image_url: string }[];
   HOSTEL_AMENITY: { name: string }[];
 }
@@ -37,7 +43,7 @@ interface ApiHostelDetail extends ApiHostel {
 // RESERVED_1 is the schema's spare slot, used here for "Kitchen Personal"
 // since the enum has no dedicated value for it. RUNNING_WATER is omitted
 // because the overlay already always shows a "Water Supply" entry.
-const AMENITY_LABELS: Record<string, string> = {
+export const AMENITY_LABELS: Record<string, string> = {
   WIFI: "WiFi",
   AIR_CONDITIONING: "AC",
   GYM: "Gym",
@@ -58,6 +64,10 @@ function toAvailability(availableRooms: number): Hostel["availability"] {
 
 function toHostel(detail: ApiHostelDetail, reviews: { rating: number }[]): Hostel {
   const prices = detail.ROOM.map((r) => r.price_per_bed);
+  // Counted from the actual rooms: the stored hostel counter is not kept in step.
+  const roomsAvailable = detail.ROOM.filter((r) => r.is_available !== false).length;
+  const bedsTotal = detail.ROOM.reduce((s, r) => s + (r.capacity ?? 0), 0);
+  const bedsTaken = detail.ROOM.reduce((s, r) => s + (r.current_occupancy ?? 0), 0);
   const images = detail.HOSTEL_IMAGE_URLS.map((i) => i.image_url);
   const rating = reviews.length
     ? reviews.reduce((sum, r) => sum + r.rating, 0) / reviews.length
@@ -72,7 +82,11 @@ function toHostel(detail: ApiHostelDetail, reviews: { rating: number }[]): Hoste
     startingPrice: prices.length ? Math.min(...prices) : 0,
     priceFreq: "per semester",
     rating,
-    availability: toAvailability(detail.available_rooms),
+    availability: toAvailability(roomsAvailable),
+    roomsAvailable,
+    roomsTotal: detail.ROOM.length,
+    bedsTotal,
+    bedsFree: bedsTotal - bedsTaken,
     amenities: detail.HOSTEL_AMENITY.map((a) => AMENITY_LABELS[a.name]).filter(Boolean),
     image: images[0] ?? "",
     gallery: images,

@@ -21,21 +21,31 @@ export function HostelsProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Manager edits (photos, prices, rooms) land in the backend, so re-read the
+  // catalogue on focus and every 30s instead of only once at start-up.
   useEffect(() => {
     let cancelled = false;
-    fetchHostels()
-      .then((hostels) => {
-        if (!cancelled) setAllHostels(hostels);
-      })
-      .catch((err) => {
-        console.error("[HostelsProvider] Could not load hostels:", err);
-        if (!cancelled) setError("Couldn't load hostels. Please try again.");
-      })
-      .finally(() => {
-        if (!cancelled) setIsLoading(false);
-      });
+    const load = (initial: boolean) =>
+      fetchHostels()
+        .then((hostels) => {
+          if (!cancelled) { setAllHostels(hostels); setError(null); }
+        })
+        .catch((err) => {
+          console.error("[HostelsProvider] Could not load hostels:", err);
+          // Keep showing the last good list on a background refresh failure.
+          if (!cancelled && initial) setError("Couldn't load hostels. Please try again.");
+        })
+        .finally(() => {
+          if (!cancelled && initial) setIsLoading(false);
+        });
+    load(true);
+    const timer = setInterval(() => { if (!document.hidden) load(false); }, 30_000);
+    const onFocus = () => { load(false); };
+    window.addEventListener("focus", onFocus);
     return () => {
       cancelled = true;
+      clearInterval(timer);
+      window.removeEventListener("focus", onFocus);
     };
   }, []);
 

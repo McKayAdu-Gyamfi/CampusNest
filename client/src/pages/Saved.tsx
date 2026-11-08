@@ -1,34 +1,25 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "react-router-dom";
+import { ROUTES } from "@/lib/routes";
+import { setSavedIds } from "@/lib/savedHostels";
+import { useNavigate } from "react-router-dom";
 import TopNav from "@/components/TopNav";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import { useHostels } from "@/contexts/HostelsContext";
 import { Search, SlidersHorizontal, Bookmark, MapPin, Trash2 } from "lucide-react";
 import { Link } from "react-router-dom";
 import FilterModal from "@/components/FilterModal";
-import HostelDetailsOverlay from "@/components/HostelDetailsOverlay";
+import { DEFAULT_FILTERS, matchesHostelFilters, type HostelFilters } from "@/lib/hostelFilters";
 import { useToast } from "@/components/ui/toaster";
 
 export default function Saved() {
   const { toast } = useToast();
-  const location = useLocation();
+  const navigate = useNavigate();
   const [savedHostelIds, setSavedHostelIds] = useState<string[]>([]);
   const { allHostels } = useHostels();
-  const [selectedHostel, setSelectedHostel] = useState<any>(null);
 
-  useEffect(() => {
-    if (location.state?.restoreHostel) {
-      const hostel = allHostels.find(h => h.id === location.state.restoreHostel);
-      if (hostel) setSelectedHostel(hostel);
-    }
-  }, [location.state, allHostels]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<{ distance: number; amenities: string[], priceRange: [number, number] }>({ 
-    distance: 10, 
-    amenities: [], 
-    priceRange: [0, 10000] 
-  });
+  const [activeFilters, setActiveFilters] = useState<HostelFilters>(DEFAULT_FILTERS);
   
   useEffect(() => {
     const saved = localStorage.getItem("saved_hostels");
@@ -41,28 +32,14 @@ export default function Saved() {
     e.stopPropagation();
     const newSaved = savedHostelIds.filter(hId => hId !== id);
     setSavedHostelIds(newSaved);
-    localStorage.setItem("saved_hostels", JSON.stringify(newSaved));
+    setSavedIds(newSaved);
     toast("Removed from saved", "info");
   };
 
   const savedHostels = allHostels.filter(h => savedHostelIds.includes(h.id));
 
   // Apply filtering and search
-  const filteredSaved = savedHostels.filter(h => {
-    // Search query
-    if (searchQuery && !h.name.toLowerCase().includes(searchQuery.toLowerCase()) && !h.location.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    
-    // Distance filter
-    if (parseFloat(h.distance) > activeFilters.distance) return false;
-    
-    // Price range filter
-    if (h.startingPrice < activeFilters.priceRange[0] || h.startingPrice > activeFilters.priceRange[1]) return false;
-    
-    // Amenities filter
-    if (activeFilters.amenities.length > 0 && !activeFilters.amenities.every(a => h.amenities.includes(a))) return false;
-    
-    return true;
-  });
+  const filteredSaved = savedHostels.filter((h) => matchesHostelFilters(h, activeFilters, searchQuery));
 
   return (
     <div className="flex flex-col min-h-screen bg-background transition-colors pb-20 relative">
@@ -108,7 +85,7 @@ export default function Saved() {
 
         {filteredSaved.length === 0 ? (
           <div className="flex flex-col items-center justify-center mt-20 lg:mt-32">
-            <div className={`w-24 h-24 rounded-full bg-[#FDFCFB] flex items-center justify-center mb-6 shadow-sm border border-border/40 ${searchQuery ? 'hidden' : 'flex'}`}>
+            <div className={`w-24 h-24 rounded-full bg-[#FDFCFB] dark:bg-card flex items-center justify-center mb-6 shadow-sm border border-border/40 ${searchQuery ? 'hidden' : 'flex'}`}>
               <Bookmark className="w-8 h-8 text-[#C56A30]" />
             </div>
             <Search className={`w-16 h-16 text-muted-foreground mb-4 opacity-50 ${searchQuery ? 'block' : 'hidden'}`} />
@@ -121,7 +98,7 @@ export default function Saved() {
             </p>
             
             {!searchQuery && (
-              <Link to="/explore" className="inline-flex items-center justify-center h-12 px-8 bg-[#C56A30] hover:bg-[#b05b26] text-white font-bold rounded-full transition-colors shadow-sm text-[15px]">
+              <Link to={ROUTES.student.explore} className="inline-flex items-center justify-center h-12 px-8 bg-[#C56A30] hover:bg-[#b05b26] text-white font-bold rounded-full transition-colors shadow-sm text-[15px]">
                 <Search className="w-4 h-4 mr-2" />
                 Explore hostels
               </Link>
@@ -132,7 +109,9 @@ export default function Saved() {
             {filteredSaved.map((hostel) => (
               <div 
                 key={hostel.id} 
-                onClick={() => setSelectedHostel(hostel)}
+                onClick={() => navigate(ROUTES.student.hostel(hostel.id))}
+                role="link" tabIndex={0}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && e.key === "Enter") navigate(ROUTES.student.hostel(hostel.id)); }}
                 className="w-full bg-card rounded-2xl p-4 shadow-sm border border-border/40 flex items-center justify-between group animate-in fade-in slide-in-from-bottom-4 duration-300 cursor-pointer hover:shadow-md transition-all"
               >
                 <div className="flex items-center space-x-4">
@@ -163,14 +142,6 @@ export default function Saved() {
           </div>
         )}
       </div>
-
-      <HostelDetailsOverlay 
-        selectedHostel={selectedHostel} 
-        setSelectedHostel={setSelectedHostel}
-        savedHostels={savedHostelIds}
-        onSave={handleUnsave}
-      />
-
       {/* Filter Modal */}
       <FilterModal 
         isOpen={isFilterOpen} 

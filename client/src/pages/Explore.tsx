@@ -1,11 +1,14 @@
 import { Search, SlidersHorizontal, Star } from "lucide-react";
-import { useLocation, Link } from "react-router-dom";
+import { setSavedIds } from "@/lib/savedHostels";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import TopNav from "@/components/TopNav";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
-import { useState, useEffect } from "react";
+import { useMemo, useState } from "react";
 import FilterModal from "@/components/FilterModal";
+import { DEFAULT_FILTERS, QUICK_CHIPS, matchesHostelFilters, type HostelFilters } from "@/lib/hostelFilters";
+import { DEFAULT_EXPLORE, parseExploreParams, toExploreParams, type ExploreState } from "@/lib/exploreParams";
+import { ROUTES } from "@/lib/routes";
 import HostelCard from "@/components/HostelCard";
-import HostelDetailsOverlay from "@/components/HostelDetailsOverlay";
 import { useHostels } from "@/contexts/HostelsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { getInitials } from "@/lib/utils";
@@ -14,43 +17,36 @@ import { useToast } from "@/components/ui/toaster";
 export default function Explore() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const location = useLocation();
-  const { allHostels, mostPopular, nearbyPlaces, isLoading, error } = useHostels();
-  const [selectedHostel, setSelectedHostel] = useState<any>(null);
+  const navigate = useNavigate();
+  const [params, setParams] = useSearchParams();
+  const { mostPopular, nearbyPlaces, isLoading, error } = useHostels();
   const [savedHostels, setSavedHostels] = useState<string[]>(() => {
     const saved = localStorage.getItem("saved_hostels");
     return saved ? JSON.parse(saved) : [];
   });
 
-  useEffect(() => {
-    if (location.state?.restoreHostel) {
-      const hostel = allHostels.find(h => h.id === location.state.restoreHostel);
-      if (hostel) setSelectedHostel(hostel);
-    }
-  }, [location.state, allHostels]);
   const [isFilterOpen, setIsFilterOpen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeFilters, setActiveFilters] = useState<{ distance: number; amenities: string[], priceRange: [number, number] }>({ 
-    distance: 10, 
-    amenities: [], 
-    priceRange: [0, 10000] 
-  });
 
-  const filteredPopular = mostPopular.filter(h => {
-    if (searchQuery && !h.name.toLowerCase().includes(searchQuery.toLowerCase()) && !h.location.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (parseFloat(h.distance) > activeFilters.distance) return false;
-    if (h.startingPrice < activeFilters.priceRange[0] || h.startingPrice > activeFilters.priceRange[1]) return false;
-    if (activeFilters.amenities.length > 0 && !activeFilters.amenities.every(a => h.amenities.includes(a))) return false;
-    return true;
-  });
+  // Search, chip and filters live in the URL: refresh, share and the back button all keep them.
+  const explore = useMemo(() => parseExploreParams(params), [params]);
+  const searchQuery = explore.q;
+  const activeChip = explore.chip;
+  const activeFilters = explore.filters;
+  const update = (patch: Partial<ExploreState>) => setParams(toExploreParams({ ...explore, ...patch }), { replace: true });
+  const setSearchQuery = (q: string) => update({ q });
+  const setActiveChip = (chip: string) => update({ chip });
+  const setActiveFilters = (filters: HostelFilters) => update({ filters });
+  const openHostel = (id: string) => navigate(ROUTES.student.hostel(id));
 
-  const filteredNearby = nearbyPlaces.filter(h => {
-    if (searchQuery && !h.name.toLowerCase().includes(searchQuery.toLowerCase()) && !h.location.toLowerCase().includes(searchQuery.toLowerCase())) return false;
-    if (parseFloat(h.distance) > activeFilters.distance) return false;
-    if (h.startingPrice < activeFilters.priceRange[0] || h.startingPrice > activeFilters.priceRange[1]) return false;
-    if (activeFilters.amenities.length > 0 && !activeFilters.amenities.every(a => h.amenities.includes(a))) return false;
-    return true;
-  });
+  const chipTest = QUICK_CHIPS.find((c) => c.label === activeChip)?.test ?? (() => true);
+  const matches = (h: (typeof mostPopular)[number]) => chipTest(h) && matchesHostelFilters(h, activeFilters, searchQuery);
+  const filteredPopular = mostPopular.filter(matches);
+  const filteredNearby = nearbyPlaces.filter(matches);
+  const hasActiveFilters =
+    activeChip !== "All" || !!searchQuery ||
+    activeFilters.distance !== DEFAULT_FILTERS.distance || activeFilters.amenities.length > 0 ||
+    activeFilters.priceRange[0] !== 0 || activeFilters.priceRange[1] !== DEFAULT_FILTERS.priceRange[1];
+  const clearAll = () => update(DEFAULT_EXPLORE);
 
   const handleSave = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -63,7 +59,7 @@ export default function Explore() {
       toast("Added to favorites", "success");
     }
     setSavedHostels(newSaved);
-    localStorage.setItem("saved_hostels", JSON.stringify(newSaved));
+    setSavedIds(newSaved);
   };
 
   return (
@@ -78,7 +74,7 @@ export default function Explore() {
         <h1 className="text-[28px] font-extrabold tracking-tight text-foreground">Explore</h1>
         <div className="flex items-center space-x-4">
           <NotificationsDropdown />
-          <Link to="/profile" className="w-[52px] h-[52px] bg-[#E5D0BA] rounded-full flex items-center justify-center font-bold text-[#6c5e57] shadow-sm text-lg cursor-pointer hover:opacity-90">
+          <Link to={ROUTES.student.profile} className="w-[52px] h-[52px] bg-[#E5D0BA] rounded-full flex items-center justify-center font-bold text-[#6c5e57] shadow-sm text-lg cursor-pointer hover:opacity-90">
             {getInitials(user?.name || user?.email)}
           </Link>
         </div>
@@ -109,11 +105,12 @@ export default function Explore() {
 
         {/* Filter Chips */}
         <div className="flex items-center space-x-3 overflow-x-auto pb-2 hide-scrollbar">
-          {["All", "Available", "Under GHS 6,500", "Air-conditioned", "Ensuite"].map((chip, idx) => (
+          {QUICK_CHIPS.map(({ label: chip }) => (
             <button 
-              key={idx} 
+              key={chip}
+              onClick={() => setActiveChip(chip)}
               className={`px-5 py-2 rounded-full font-extrabold text-[13px] whitespace-nowrap transition-colors cursor-pointer ${
-                idx === 0 
+                activeChip === chip
                   ? "bg-[#C56A30] text-white shadow-sm" 
                   : "bg-[#F4ECE3] dark:bg-card text-[#C56A30] hover:bg-[#EBE2D8]"
               }`}
@@ -121,6 +118,11 @@ export default function Explore() {
               {chip}
             </button>
           ))}
+          {hasActiveFilters && (
+            <button onClick={clearAll} className="px-4 py-2 text-[13px] font-bold text-muted-foreground hover:text-foreground whitespace-nowrap cursor-pointer">
+              Clear all
+            </button>
+          )}
         </div>
 
         {/* Most Popular */}
@@ -130,12 +132,12 @@ export default function Explore() {
           </div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredPopular.length === 0 && <p className="text-muted-foreground text-sm py-4">{isLoading ? "Loading hostels..." : error ?? "No popular hostels match your search."}</p>}
+            {filteredPopular.length === 0 && <p className="text-muted-foreground text-sm py-4">{isLoading ? "Loading hostels..." : error ?? "No popular hostels match your filters."}</p>}
             {filteredPopular.map((hostel) => (
               <HostelCard 
                 key={hostel.id}
                 hostel={hostel} 
-                onClick={() => setSelectedHostel(hostel)} 
+                onClick={() => openHostel(hostel.id)} 
                 onSave={(e) => handleSave(e, hostel.id)}
                 isSaved={savedHostels.includes(hostel.id)}
                 showHeart={true}
@@ -151,11 +153,13 @@ export default function Explore() {
           </div>
           
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
-            {filteredNearby.length === 0 && <p className="text-muted-foreground text-sm py-4">No nearby hostels match your search.</p>}
+            {filteredNearby.length === 0 && <p className="text-muted-foreground text-sm py-4">No nearby hostels match your filters.</p>}
             {filteredNearby.map((hostel) => (
               <div 
                 key={hostel.id} 
-                onClick={() => setSelectedHostel(hostel)}
+                onClick={() => openHostel(hostel.id)}
+                role="link" tabIndex={0}
+                onKeyDown={(e) => { if (e.target === e.currentTarget && e.key === "Enter") openHostel(hostel.id); }}
                 className="w-full bg-card rounded-2xl p-4 flex items-center shadow-sm border border-border/40 cursor-pointer hover:shadow-md transition-all gap-4"
               >
                 <img src={hostel.image} alt={hostel.name} loading="lazy" className="w-[110px] h-[110px] rounded-[18px] object-cover shrink-0" />
@@ -167,7 +171,7 @@ export default function Explore() {
                       const isAvailable = hostel.availability?.toUpperCase() === 'AVAILABLE';
                       return (
                         <div className={`font-extrabold text-[11px] px-3 py-1 rounded-full flex items-center space-x-1.5 ${
-                          isAvailable ? 'bg-[#E6F4EA] text-[#137333]' : 'bg-[#FCE8E6] text-[#C5221F]'
+                          isAvailable ? 'bg-[#E6F4EA] dark:bg-emerald-500/15 text-[#137333] dark:text-emerald-400' : 'bg-[#FCE8E6] dark:bg-red-500/15 text-[#C5221F] dark:text-red-400'
                         }`}>
                           <span className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-[#137333]' : 'bg-[#C5221F]'}`} />
                           <span>{hostel.availability}</span>
@@ -195,12 +199,6 @@ export default function Explore() {
         initialFilters={activeFilters}
       />
 
-      <HostelDetailsOverlay 
-        selectedHostel={selectedHostel} 
-        setSelectedHostel={setSelectedHostel}
-        savedHostels={savedHostels}
-        onSave={handleSave}
-      />
 
     </div>
   );

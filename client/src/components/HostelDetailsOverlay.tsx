@@ -1,9 +1,10 @@
-import { ChevronLeft, ChevronRight, Heart, MapPin, Navigation, Search, Star, ThumbsUp, X, Box, Wifi, WashingMachine, ChefHat, Dumbbell, AirVent, ShieldCheck, Droplets } from "lucide-react";
+import { ChevronLeft, ChevronRight, Heart, MapPin, Navigation, Star, ThumbsUp, X, Box, Wifi, WashingMachine, ChefHat, Dumbbell, AirVent, ShieldCheck, Droplets, } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
 import { useEffect, useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import { useBookings } from "@/contexts/BookingContext";
+import HostelReviews from "@/components/HostelReviews";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
-import { useHostels } from "@/contexts/HostelsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { getInitials } from "@/lib/utils";
 
@@ -27,12 +28,9 @@ const AMENITY_ICONS: Record<string, any> = {
 
 export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel, savedHostels = [], onSave }: HostelDetailsOverlayProps) {
   const navigate = useNavigate();
-  const { allHostels } = useHostels();
   const { user } = useAuth();
   const [selectedRoom, setSelectedRoom] = useState<number | null>(1);
   const [activeImageIndex, setActiveImageIndex] = useState<number | null>(null);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [renderedHostel, setRenderedHostel] = useState<any>(null);
   const [isOpen, setIsOpen] = useState(false);
   const { bookings } = useBookings();
@@ -51,7 +49,8 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
     }
   }, [selectedHostel]);
 
-  const hasActiveBooking = bookings.some((b) => b.studentName === "Sarah Adjei" && (b.status === "PENDING" || b.status === "CONFIRMED"));
+  const activeBooking = bookings.find((b) => b.status === "PENDING" || b.status === "CONFIRMED");
+  const hasActiveBooking = !!activeBooking;
 
   const roomTypes = [
     { label: "Premium Studio", subtitle: "1 person · ensuite", value: 1, priceOffset: 2000, amenities: ["Air-Conditioned", "Ensuite"] },
@@ -78,29 +77,29 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
   if (!renderedHostel) return null;
 
   const hostel = renderedHostel;
+  // Booked here: show success (green) instead of the blocked (red) state.
+  const bookedHere = !!activeBooking && activeBooking.hostelId === hostel.id;
+  const bookedHereLabel = activeBooking?.status === "CONFIRMED" ? "Room booked ✓ You're all set" : "Room booked ✓ Awaiting manager approval";
   const isAvailable = hostel.availability?.toUpperCase() === "AVAILABLE";
+  const roomsBadge = (className = "") =>
+    hostel.roomsTotal ? (
+      <div
+        role="img"
+        aria-label={`${hostel.roomsAvailable} of ${hostel.roomsTotal} rooms available, ${hostel.bedsFree} of ${hostel.bedsTotal} beds free`}
+        title={`${hostel.roomsAvailable} of ${hostel.roomsTotal} rooms available · ${hostel.bedsFree} of ${hostel.bedsTotal} beds free`}
+        className={`w-[76px] h-[76px] rounded-full bg-white/95 backdrop-blur-sm shadow-lg border-2 flex flex-col items-center justify-center leading-none ${hostel.roomsAvailable > 0 ? "border-[#137333]/40" : "border-[#C5221F]/40"} ${className}`}
+      >
+        <span className={`text-[22px] font-extrabold tracking-tight ${hostel.roomsAvailable > 0 ? "text-[#137333] dark:text-emerald-400" : "text-[#C5221F] dark:text-red-400"}`}>{hostel.roomsAvailable}<span className="text-[13px] text-muted-foreground font-bold">/{hostel.roomsTotal}</span></span>
+        <span className="text-[9px] font-extrabold uppercase tracking-wider text-muted-foreground mt-1">rooms left</span>
+      </div>
+    ) : null;
   const extraGalleryCount = Math.max((hostel.gallery?.length || 0) - 3, 0);
-
-  const searchSuggestions = searchQuery.trim().length > 0
-    ? allHostels.filter((h: any) =>
-        h.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        h.location.toLowerCase().includes(searchQuery.toLowerCase())
-      ).slice(0, 6)
-    : [];
-  const showSearchDropdown = isSearchFocused && searchQuery.trim().length > 0;
-
-  const handleSelectSuggestion = (hostel: any) => {
-    setSelectedHostel(hostel);
-    setSelectedRoom(1);
-    setSearchQuery("");
-    setIsSearchFocused(false);
-  };
 
   const handleBook = () => {
     if (!selectedRoom || hasActiveBooking) return;
     const activeRoomObj = roomTypes.find((t) => t.value === selectedRoom) || roomTypes[1];
     const finalPrice = Number(hostel.startingPrice) + activeRoomObj.priceOffset;
-    navigate("/booking", {
+    navigate(ROUTES.student.checkout, {
       state: {
         hostelName: hostel.name,
         location: hostel.location,
@@ -118,7 +117,7 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
     e.stopPropagation();
     const activeRoomObj = roomTypes.find((t) => t.value === selectedRoom) || roomTypes[1];
     const finalPrice = Number(hostel.startingPrice) + activeRoomObj.priceOffset;
-    navigate("/live-preview", {
+    navigate(ROUTES.student.tour, {
       state: {
         returnToHostel: hostel.id,
         returnPath: window.location.pathname,
@@ -260,14 +259,16 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
       disabled={!selectedRoom || hasActiveBooking}
       onClick={handleBook}
       className={`w-full py-4 rounded-2xl font-bold flex justify-center items-center transition-all text-lg ${
-        hasActiveBooking
+        bookedHere
+          ? "bg-[#E6F4EA] dark:bg-emerald-500/15 text-[#137333] dark:text-emerald-400 cursor-default border border-[#137333]/30"
+          : hasActiveBooking
           ? "bg-red-500/10 text-red-500 opacity-90 cursor-not-allowed border border-red-500/20"
           : selectedRoom
           ? "bg-primary text-primary-foreground shadow-[0_4px_20px_rgba(197,106,48,0.3)] hover:scale-[1.02] active:scale-[0.98]"
           : "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
       } ${className}`}
     >
-      {hasActiveBooking ? "You already have an active booking" : selectedRoom ? "Book Now" : "Select a room to proceed"}
+      {bookedHere ? bookedHereLabel : hasActiveBooking ? "You already have an active booking" : selectedRoom ? "Book Now" : "Select a room to proceed"}
     </button>
   );
 
@@ -291,7 +292,7 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
 
             <button
               onClick={() => setSelectedHostel(null)}
-              className="absolute top-6 left-6 w-10 h-10 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md text-foreground border border-white/40 hover:bg-white transition-colors shadow-sm"
+              className="absolute top-6 left-6 w-10 h-10 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md text-[#3D261B] border border-white/40 hover:bg-white transition-colors shadow-sm"
             >
               <ChevronLeft className="w-6 h-6" />
             </button>
@@ -301,14 +302,16 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
                 onClick={(e) => onSave(e, hostel.id)}
                 className="absolute top-6 right-6 w-10 h-10 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md border border-white/40 hover:bg-white transition-colors shadow-sm"
               >
-                <Heart className={`w-5 h-5 ${savedHostels.includes(hostel.id) ? "fill-primary text-primary" : "text-foreground"}`} />
+                <Heart className={`w-5 h-5 ${savedHostels.includes(hostel.id) ? "fill-primary text-primary" : "text-[#3D261B]"}`} />
               </button>
             )}
+
+            {roomsBadge("absolute bottom-6 right-5 z-30")}
 
             {/* Availability pill straddling image/card boundary */}
             <div
               className={`absolute -bottom-3 left-6 font-extrabold text-[11px] px-3 py-1.5 rounded-full flex items-center space-x-1.5 shadow-sm z-30 ${
-                isAvailable ? "bg-[#E6F4EA] text-[#137333]" : "bg-[#FCE8E6] text-[#C5221F]"
+                isAvailable ? "bg-[#E6F4EA] dark:bg-emerald-500/15 text-[#137333] dark:text-emerald-400" : "bg-[#FCE8E6] dark:bg-red-500/15 text-[#C5221F] dark:text-red-400"
               }`}
             >
               <span className={`w-2 h-2 rounded-full ${isAvailable ? "bg-[#137333]" : "bg-[#C5221F]"}`} />
@@ -341,6 +344,7 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
 
               <div className="mb-8">
                 <h3 className="text-xs font-extrabold tracking-wider text-muted-foreground uppercase mb-3">Choose a room</h3>
+
                 <div className="space-y-3">{roomTypes.map((type) => renderRoomOption(type))}</div>
               </div>
 
@@ -358,6 +362,8 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
                 <h3 className="text-xs font-extrabold tracking-wider text-muted-foreground uppercase mb-3">Location</h3>
                 {LocationMap}
               </div>
+
+              <div className="mb-8"><HostelReviews hostelId={hostel.id} hostelName={hostel.name} /></div>
             </div>
           </div>
 
@@ -377,14 +383,16 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
               disabled={!selectedRoom || hasActiveBooking}
               onClick={handleBook}
               className={`shrink-0 px-8 py-3.5 rounded-full font-bold transition-all ${
-                hasActiveBooking
+                bookedHere
+                  ? "bg-[#E6F4EA] dark:bg-emerald-500/15 text-[#137333] dark:text-emerald-400 cursor-default border border-[#137333]/30"
+                  : hasActiveBooking
                   ? "bg-red-500/10 text-red-500 opacity-90 cursor-not-allowed border border-red-500/20"
                   : selectedRoom
                   ? "bg-primary text-primary-foreground shadow-[0_4px_20px_rgba(197,106,48,0.3)] hover:scale-[1.02] active:scale-[0.98]"
                   : "bg-muted text-muted-foreground opacity-50 cursor-not-allowed"
               }`}
             >
-              {hasActiveBooking ? "Unavailable" : "Book room"}
+              {bookedHere ? "Booked ✓" : hasActiveBooking ? "Unavailable" : "Book room"}
             </button>
           </div>
         </div>
@@ -397,54 +405,10 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
         }`}
       >
         <div className="max-w-6xl mx-auto px-10 py-8">
-          {/* Top bar: search + notifications + avatar (mirrors Explore desktop header) */}
-          <div className="flex items-center gap-4 mb-6">
-            <div className="relative flex-1">
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-              <input
-                type="text"
-                placeholder="Search hostels near Berekuso..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setTimeout(() => setIsSearchFocused(false), 150)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") {
-                    const q = searchQuery;
-                    setSelectedHostel(null);
-                    navigate("/explore", { state: { searchQuery: q } });
-                  }
-                }}
-                className="w-full h-14 bg-[#F4ECE3] dark:bg-card rounded-[16px] pl-12 pr-4 text-[15px] font-medium text-foreground focus:outline-none focus:ring-2 focus:ring-[#C56A30] shadow-none border border-transparent dark:border-border transition-all"
-              />
-
-              {showSearchDropdown && (
-                <div className="absolute top-full left-0 right-0 mt-2 bg-card border border-border rounded-2xl shadow-lg z-30 overflow-hidden">
-                  {searchSuggestions.length === 0 ? (
-                    <p className="px-4 py-3 text-sm text-muted-foreground">No hostels match "{searchQuery}"</p>
-                  ) : (
-                    searchSuggestions.map((hostel: any) => (
-                      <div
-                        key={hostel.id}
-                        onMouseDown={(e) => {
-                          e.preventDefault();
-                          handleSelectSuggestion(hostel);
-                        }}
-                        className="flex items-center gap-3 px-4 py-3 hover:bg-accent/60 cursor-pointer transition-colors"
-                      >
-                        <img src={hostel.image} alt={hostel.name} loading="lazy" className="w-10 h-10 rounded-lg object-cover shrink-0" />
-                        <div className="min-w-0">
-                          <p className="text-sm font-bold text-foreground truncate">{hostel.name}</p>
-                          <p className="text-xs text-muted-foreground truncate">{hostel.location}</p>
-                        </div>
-                      </div>
-                    ))
-                  )}
-                </div>
-              )}
-            </div>
+          {/* Top bar: notifications + avatar */}
+          <div className="flex items-center justify-end gap-4 mb-6">
             <NotificationsDropdown />
-            <Link to="/profile" className="w-[52px] h-[52px] bg-[#E5D0BA] rounded-full flex items-center justify-center font-bold text-[#6c5e57] shadow-sm text-lg cursor-pointer hover:opacity-90 shrink-0">
+            <Link to={ROUTES.student.profile} className="w-[52px] h-[52px] bg-[#E5D0BA] rounded-full flex items-center justify-center font-bold text-[#6c5e57] shadow-sm text-lg cursor-pointer hover:opacity-90 shrink-0">
               {getInitials(user?.name || user?.email)}
             </Link>
           </div>
@@ -471,19 +435,21 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
 
                 <div
                   className={`absolute top-5 left-5 font-extrabold text-[11px] px-3 py-1.5 rounded-full flex items-center space-x-1.5 ${
-                    isAvailable ? "bg-[#E6F4EA] text-[#137333]" : "bg-[#FCE8E6] text-[#C5221F]"
+                    isAvailable ? "bg-[#E6F4EA] dark:bg-emerald-500/15 text-[#137333] dark:text-emerald-400" : "bg-[#FCE8E6] dark:bg-red-500/15 text-[#C5221F] dark:text-red-400"
                   }`}
                 >
                   <span className={`w-2 h-2 rounded-full ${isAvailable ? "bg-[#137333]" : "bg-[#C5221F]"}`} />
                   <span>{hostel.availability}</span>
                 </div>
 
+                {roomsBadge("absolute bottom-5 right-5")}
+
                 {onSave && (
                   <button
                     onClick={(e) => onSave(e, hostel.id)}
                     className="absolute top-5 right-5 w-10 h-10 flex items-center justify-center rounded-full bg-white/80 backdrop-blur-md border border-white/40 hover:bg-white transition-colors shadow-sm"
                   >
-                    <Heart className={`w-5 h-5 ${savedHostels.includes(hostel.id) ? "fill-primary text-primary" : "text-foreground"}`} />
+                    <Heart className={`w-5 h-5 ${savedHostels.includes(hostel.id) ? "fill-primary text-primary" : "text-[#3D261B]"}`} />
                   </button>
                 )}
               </div>
@@ -535,6 +501,7 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
               {DescriptionBlock}
               {AmenitiesBlock}
               {LocationBlock}
+              <div className="mb-8"><HostelReviews hostelId={hostel.id} hostelName={hostel.name} /></div>
             </div>
 
             {/* Right column: sticky pricing card */}
@@ -545,7 +512,6 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
                   <span className="text-3xl font-extrabold text-foreground">GHS {Number(hostel.startingPrice).toLocaleString()}</span>
                   <span className="text-sm font-medium text-muted-foreground">/semester</span>
                 </div>
-
                 <span className="text-[11px] font-extrabold tracking-wider text-muted-foreground mb-3 block">CHOOSE A ROOM</span>
                 <div className="space-y-3 mb-5">{roomTypes.map((type) => renderRoomOption(type, true))}</div>
 

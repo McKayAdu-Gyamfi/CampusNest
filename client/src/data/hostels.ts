@@ -4,7 +4,7 @@ export const getImage = (filename: string): string => {
   return `/images/${name}.webp`;
 };
 
-const dufieAnnex = { 
+export const dufieAnnex = { 
   id: '1', 
   name: 'Dufie Annex', 
   location: 'Dufie Annex, Berekuso', 

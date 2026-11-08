@@ -20,6 +20,10 @@ export default function HostelCard({
   return (
     <div 
       onClick={onClick}
+      {...(onClick ? {
+        role: "link", tabIndex: 0,
+        onKeyDown: (e: React.KeyboardEvent) => { if (e.target === e.currentTarget && e.key === "Enter") onClick(); },
+      } : {})}
       className={`w-full bg-card border border-border/40 rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all flex flex-col group relative ${onClick ? 'cursor-pointer' : ''} ${className}`}
     >
       <div className="relative h-[190px] w-full shrink-0 overflow-hidden bg-muted">
@@ -49,7 +53,7 @@ export default function HostelCard({
         {/* Availability Badge Bottom Left if FULL */}
         {hostel.availability && hostel.availability.toUpperCase() === 'FULL' && (
           <div className="absolute bottom-3 left-3">
-            <span className="bg-[#FCE8E6] text-[#C5221F] font-extrabold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full backdrop-blur-md">
+            <span className="bg-[#FCE8E6] dark:bg-red-500/15 text-[#C5221F] dark:text-red-400 font-extrabold text-[10px] uppercase tracking-wider px-2.5 py-1 rounded-full backdrop-blur-md">
               FULL
             </span>
           </div>

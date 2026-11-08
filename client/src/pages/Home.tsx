@@ -1,12 +1,14 @@
 import { Star, Search } from "lucide-react";
+import { ROUTES } from "@/lib/routes";
+import { setSavedIds } from "@/lib/savedHostels";
+import ProfileCompletionBanner from "@/components/ProfileCompletionBanner";
 import { ScrollArea, ScrollBar } from "@/components/ui/scroll-area";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import TopNav from "@/components/TopNav";
 import FilterModal from "@/components/FilterModal";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import HostelCard from "@/components/HostelCard";
-import HostelDetailsOverlay from "@/components/HostelDetailsOverlay";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useHostels } from "@/contexts/HostelsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { getInitials } from "@/lib/utils";
@@ -23,21 +25,14 @@ const getBadgeStyle = (availability: string) => {
 export default function Home() {
   const { toast } = useToast();
   const { user } = useAuth();
-  const location = useLocation();
+  const navigate = useNavigate();
+  const openHostel = (id: string) => navigate(ROUTES.student.hostel(id));
   const [isFilterOpen, setIsFilterOpen] = useState(false);
   const { allHostels, mostPopular, nearbyPlaces, isLoading, error } = useHostels();
-  const [selectedHostel, setSelectedHostel] = useState<any>(null);
   const [savedHostels, setSavedHostels] = useState<string[]>(() => {
     const saved = localStorage.getItem("saved_hostels");
     return saved ? JSON.parse(saved) : [];
   });
-
-  useEffect(() => {
-    if (location.state?.restoreHostel) {
-      const hostel = allHostels.find(h => h.id === location.state.restoreHostel);
-      if (hostel) setSelectedHostel(hostel);
-    }
-  }, [location.state, allHostels]);
 
   const handleSave = (e: React.MouseEvent, id: string) => {
     e.stopPropagation();
@@ -50,7 +45,7 @@ export default function Home() {
       toast("Added to favorites", "success");
     }
     setSavedHostels(newSaved);
-    localStorage.setItem("saved_hostels", JSON.stringify(newSaved));
+    setSavedIds(newSaved);
   };
 
   return (
@@ -72,14 +67,16 @@ export default function Home() {
         </div>
         <div className="flex items-center space-x-4">
           <NotificationsDropdown />
-          <Link to="/profile" className="w-[52px] h-[52px] bg-[#E5D0BA] rounded-full flex items-center justify-center font-bold text-[#6c5e57] shadow-sm text-lg cursor-pointer hover:opacity-90">
+          <Link to={ROUTES.student.profile} className="w-[52px] h-[52px] bg-[#E5D0BA] rounded-full flex items-center justify-center font-bold text-[#6c5e57] shadow-sm text-lg cursor-pointer hover:opacity-90">
             {getInitials(user?.name || user?.email)}
           </Link>
         </div>
       </header>
+      <div className="hidden lg:block px-8 mb-4"><ProfileCompletionBanner /></div>
 
       {/* Mobile Hero Section */}
       <section className="lg:hidden px-4 pt-20 pb-4 mb-2">
+        <ProfileCompletionBanner className="mb-4" />
         <div className="relative w-full rounded-2xl overflow-hidden bg-gradient-to-br from-[#8C5B4F] to-[#5c3e35] p-6 text-white shadow-md">
           <div className="absolute inset-0 opacity-[0.08]"
             style={{
@@ -93,7 +90,7 @@ export default function Home() {
             <h1 className="text-white text-[26px] font-extrabold leading-tight tracking-tight mb-5">
               Find your perfect room
             </h1>
-            <Link to="/explore" className="inline-flex items-center justify-center h-11 px-7 bg-[#C56A30] hover:bg-[#b05b26] text-white font-extrabold rounded-full transition-colors shadow-sm text-sm cursor-pointer">
+            <Link to={ROUTES.student.explore} className="inline-flex items-center justify-center h-11 px-7 bg-[#C56A30] hover:bg-[#b05b26] text-white font-extrabold rounded-full transition-colors shadow-sm text-sm cursor-pointer">
               Explore
             </Link>
           </div>
@@ -116,7 +113,7 @@ export default function Home() {
             <h1 className="text-white text-[48px] font-extrabold leading-[1.1] tracking-tight mb-8">
               Find your perfect room
             </h1>
-            <Link to="/explore" className="inline-flex items-center justify-center h-14 px-8 bg-[#C56A30] hover:bg-[#b05b26] text-white font-bold rounded-full transition-colors shadow-lg shadow-black/20 text-[16px] cursor-pointer">
+            <Link to={ROUTES.student.explore} className="inline-flex items-center justify-center h-14 px-8 bg-[#C56A30] hover:bg-[#b05b26] text-white font-bold rounded-full transition-colors shadow-lg shadow-black/20 text-[16px] cursor-pointer">
               Explore hostels
             </Link>
           </div>
@@ -127,7 +124,7 @@ export default function Home() {
       <section className="py-2 px-4 lg:px-4">
         <div className="flex items-center justify-between mb-4 lg:mb-6">
           <h3 className="text-xl lg:text-[24px] font-extrabold tracking-tight text-foreground">Featured</h3>
-          <Link to="/explore" className="text-sm font-bold text-[#C56A30] hover:underline cursor-pointer">View all</Link>
+          <Link to={ROUTES.student.explore} className="text-sm font-bold text-[#C56A30] hover:underline cursor-pointer">View all</Link>
         </div>
         
         {(isLoading || error || allHostels.length === 0) && (
@@ -142,7 +139,7 @@ export default function Home() {
             <HostelCard 
               key={hostel.id}
               hostel={hostel} 
-              onClick={() => setSelectedHostel(hostel)} 
+              onClick={() => openHostel(hostel.id)} 
               onSave={(e) => handleSave(e, hostel.id)}
               isSaved={savedHostels.includes(hostel.id)}
               showHeart={true}
@@ -158,7 +155,7 @@ export default function Home() {
                 <div key={hostel.id} className="w-[300px] shrink-0 block outline-none cursor-pointer">
                   <HostelCard 
                     hostel={hostel} 
-                    onClick={() => setSelectedHostel(hostel)} 
+                    onClick={() => openHostel(hostel.id)} 
                     onSave={(e) => handleSave(e, hostel.id)}
                     isSaved={savedHostels.includes(hostel.id)}
                     showHeart={true}
@@ -179,7 +176,9 @@ export default function Home() {
           {nearbyPlaces.map((hostel) => (
             <div 
               key={hostel.id} 
-              onClick={() => setSelectedHostel(hostel)}
+              onClick={() => openHostel(hostel.id)}
+              role="link" tabIndex={0}
+              onKeyDown={(e) => { if (e.target === e.currentTarget && e.key === "Enter") openHostel(hostel.id); }}
               className="bg-card border border-border rounded-lg flex p-3 hover:shadow-md hover:bg-accent/50 transition-all cursor-pointer w-full"
             >
               <div className="w-[88px] h-[88px] rounded-xl overflow-hidden shrink-0">
@@ -219,14 +218,6 @@ export default function Home() {
         onApplyFilters={() => {}} 
         initialFilters={{ distance: 10, amenities: [], priceRange: [0, 10000] }}
       />
-
-      <HostelDetailsOverlay 
-        selectedHostel={selectedHostel} 
-        setSelectedHostel={setSelectedHostel}
-        savedHostels={savedHostels}
-        onSave={handleSave}
-      />
-
     </div>
   );
 }
