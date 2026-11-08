@@ -33,7 +33,12 @@ const TITLES: [RegExp, string][] = [
   [/^\/admin\/users$/, "Users"],
   [/^\/admin\/hostels$/, "Hostels"],
   [/^\/admin\/schools$/, "Schools"],
+  [/^\/admin\/bookings$/, "Bookings and payments"],
+  [/^\/admin\/complaints$/, "Enquiries and complaints"],
+  [/^\/admin\/reviews$/, "Reviews"],
   [/^\/admin\/room-tours$/, "Room tours"],
+  [/^\/admin\/audit$/, "Audit log"],
+  [/^\/admin\/profile$/, "My account"],
   [/^\/admin\/settings$/, "Platform settings"],
 ];
 

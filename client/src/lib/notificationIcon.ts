@@ -8,6 +8,7 @@ export function notificationIcon(type: string): { Icon: LucideIcon } {
     case "booking_declined":
     case "booking_cancelled":
     case "hostel_rejected": return { Icon: XCircle };
+    case "hostel_pending":
     case "hostel_approved": return { Icon: Building2 };
     case "new_review": return { Icon: Star };
     case "enquiry_new":

@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { ROUTES } from "@/lib/routes";
 import { Bell } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "@/contexts/AuthContext";
 import { useNotifications } from "@/contexts/NotificationsContext";
 import { notificationIcon, timeAgo } from "@/lib/notificationIcon";
@@ -12,6 +12,7 @@ export default function NotificationsDropdown({ variant = "default" }: { variant
   const [activeTab, setActiveTab] = useState("View All");
   const { notifications, unreadCount, markRead, markAllRead } = useNotifications();
   const { user } = useAuth();
+  const navigate = useNavigate();
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -78,7 +79,7 @@ export default function NotificationsDropdown({ variant = "default" }: { variant
             {filteredNotifications.map((n) => (
               <div 
                 key={n.id}
-                onClick={() => markRead(n.id)}
+                onClick={() => { markRead(n.id); if (n.link) { setIsOpen(false); navigate(n.link); } }}
                 className={`p-3 rounded-2xl transition-colors cursor-pointer flex gap-4 ${
                   n.read ? 'opacity-70 hover:bg-accent/30' : 'bg-[#C56A30]/10 border border-[#C56A30]/20 hover:bg-[#C56A30]/15'
                 }`}

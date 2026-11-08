@@ -10,6 +10,7 @@ const TABS = ["All", "Unread"] as const;
 
 /** Where tapping a notification should take the student. */
 function targetFor(n: AppNotification): string | null {
+  if (n.link) return n.link;
   if (n.booking_id && (n.type.startsWith("booking_") || n.type === "complaint_reply")) return ROUTES.student.booking(n.booking_id);
   return null;
 }

@@ -47,6 +47,11 @@ const AdminHostels = React.lazy(() => import("./pages/admin/AdminHostels"));
 const AdminSchools = React.lazy(() => import("./pages/admin/AdminSchools"));
 const AdminRoomTours = React.lazy(() => import("./pages/admin/AdminRoomTours"));
 const AdminSettings = React.lazy(() => import("./pages/admin/AdminSettings"));
+const AdminBookings = React.lazy(() => import("./pages/admin/AdminBookings"));
+const AdminComplaints = React.lazy(() => import("./pages/admin/AdminComplaints"));
+const AdminReviews = React.lazy(() => import("./pages/admin/AdminReviews"));
+const AdminAudit = React.lazy(() => import("./pages/admin/AdminAudit"));
+const AdminProfile = React.lazy(() => import("./pages/admin/AdminProfile"));
 
 const ScreenLoader = () => (
   <div className="flex h-screen w-full items-center justify-center bg-background">
@@ -107,6 +112,11 @@ export default function App() {
           <Route path="users" element={<AdminUsers />} />
           <Route path="hostels" element={<AdminHostels />} />
           <Route path="schools" element={<AdminSchools />} />
+          <Route path="bookings" element={<AdminBookings />} />
+          <Route path="complaints" element={<AdminComplaints />} />
+          <Route path="reviews" element={<AdminReviews />} />
+          <Route path="audit" element={<AdminAudit />} />
+          <Route path="profile" element={<AdminProfile />} />
           <Route path="room-tours" element={<AdminRoomTours />} />
           <Route path="settings" element={<AdminSettings />} />
         </Route>

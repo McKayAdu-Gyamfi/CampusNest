@@ -1,8 +1,12 @@
 import { useCallback, useEffect, useState } from "react";
-import { Plus, GraduationCap, MapPin, X } from "lucide-react";
+import { Plus, GraduationCap, MapPin, X, Pencil, Trash2 } from "lucide-react";
+import { ConfirmDialog, Modal } from "@/components/admin/AdminUI";
+import { useToast } from "@/components/ui/toaster";
 import {
   getSchools,
   createSchool,
+  updateSchool,
+  deleteSchool,
   getSchoolHostels,
   getUnassignedHostels,
   assignHostel,
@@ -36,6 +40,12 @@ export default function AdminSchools() {
 
   const [showPicker, setShowPicker] = useState(false);
   const [busyHostel, setBusyHostel] = useState<string | null>(null);
+  const { toast } = useToast();
+  const [editing, setEditing] = useState(false);
+  const [editForm, setEditForm] = useState({ name: "", location: "", email_domain: "" });
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
+  const [confirmDelete, setConfirmDelete] = useState(false);
 
   const selected = schools.find((s) => s.id === selectedId) ?? null;
 
@@ -80,6 +90,28 @@ export default function AdminSchools() {
       setError(errorMessage(err));
     } finally {
       setSavingSchool(false);
+    }
+  };
+
+  const startEdit = () => {
+    if (!selected) return;
+    setEditForm({ name: selected.name, location: selected.location, email_domain: selected.email_domain });
+    setEditError(null);
+    setEditing(true);
+  };
+  const saveEdit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selected) return;
+    setSavingEdit(true); setEditError(null);
+    try {
+      await updateSchool(selected.id, editForm);
+      await loadSchools();
+      setEditing(false);
+      toast("School updated.");
+    } catch (err) {
+      setEditError(errorMessage(err));
+    } finally {
+      setSavingEdit(false);
     }
   };
 
@@ -194,13 +226,19 @@ export default function AdminSchools() {
             <div className="lg:col-span-2 space-y-6 lg:pl-6">
               {/* Map Header Box */}
               <div className="bg-card border border-border/40 rounded-2xl p-6 shadow-sm space-y-4">
-                <div>
+                <div className="flex items-start justify-between gap-3">
+                  <div>
                   <h2 className="text-[22px] font-extrabold text-foreground leading-tight">{selected.name}</h2>
                   <p className="text-[13px] text-muted-foreground font-medium flex items-center space-x-1 mt-0.5">
                     <MapPin className="w-3.5 h-3.5 text-[#C56A30]" />
                     <span>{selected.location}</span>
                     <span>· @{selected.email_domain}</span>
                   </p>
+                  </div>
+                  <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={startEdit} aria-label="Edit school" className="h-9 px-4 rounded-full border border-border/60 text-xs font-extrabold flex items-center gap-1.5 hover:bg-accent cursor-pointer"><Pencil className="w-3.5 h-3.5" />Edit</button>
+                    <button onClick={() => setConfirmDelete(true)} aria-label="Delete school" className="h-9 w-9 rounded-full border border-red-200 text-red-600 flex items-center justify-center hover:bg-red-50 dark:hover:bg-red-500/10 cursor-pointer"><Trash2 className="w-4 h-4" /></button>
+                  </div>
                 </div>
 
                 {/* Campus Map Placeholder Graphic */}
@@ -301,6 +339,33 @@ export default function AdminSchools() {
             </div>
           )}
         </div>
+      )}
+
+      {editing && selected && (
+        <Modal title={`Edit ${selected.name}`} onClose={() => setEditing(false)}>
+          <form onSubmit={saveEdit} className="space-y-4">
+            {([["name", "Name"], ["location", "Location"], ["email_domain", "Student email domain"]] as const).map(([k, label]) => (
+              <div key={k} className="space-y-1.5">
+                <label htmlFor={`sch-${k}`} className="text-xs font-bold text-foreground">{label}</label>
+                <input id={`sch-${k}`} required value={editForm[k]} onChange={(e) => setEditForm({ ...editForm, [k]: e.target.value })} className={inputClass} />
+              </div>
+            ))}
+            {editError && <p role="alert" className="text-[12px] font-bold text-red-600">{editError}</p>}
+            <div className="flex justify-end gap-3 pt-2">
+              <button type="button" onClick={() => setEditing(false)} className="h-11 px-6 rounded-full border border-border font-bold text-sm cursor-pointer">Cancel</button>
+              <button type="submit" disabled={savingEdit} className="h-11 px-6 rounded-full bg-[#C56A30] hover:bg-[#b05b26] text-white font-bold text-sm disabled:opacity-60 cursor-pointer">{savingEdit ? "Saving…" : "Save changes"}</button>
+            </div>
+          </form>
+        </Modal>
+      )}
+      {confirmDelete && selected && (
+        <ConfirmDialog
+          title={`Delete ${selected.name}?`}
+          description={selected.hostel_count > 0 ? `Its ${selected.hostel_count} hostel${selected.hostel_count === 1 ? "" : "s"} stay live but will no longer belong to any school. This can't be undone.` : "This school has no hostels. This can't be undone."}
+          confirmLabel="Delete school"
+          onConfirm={async () => { await deleteSchool(selected.id); toast(`${selected.name} was deleted.`); setSelectedId(null); await loadSchools(); }}
+          onClose={() => setConfirmDelete(false)}
+        />
       )}
     </div>
   );

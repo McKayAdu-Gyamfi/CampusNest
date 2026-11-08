@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { ROUTES } from "@/lib/routes";
-import { GraduationCap, FileText, BedDouble, Banknote, Bell } from "lucide-react";
+import { GraduationCap, FileText, BedDouble, Banknote } from "lucide-react";
+import NotificationsDropdown from "@/components/NotificationsDropdown";
 import { Link } from "react-router-dom";
 import { getAdminStats, formatGHS, errorMessage, type AdminStats } from "@/lib/adminApi";
 
@@ -53,9 +54,7 @@ export default function AdminDashboard() {
             {loadedAt ? `Updated ${loadedAt.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}` : "Loading…"}
           </p>
         </div>
-        <button className="w-12 h-12 bg-card border border-border/50 rounded-full flex items-center justify-center relative shadow-sm hover:bg-accent transition-colors cursor-pointer">
-          <Bell className="w-5 h-5 text-[#5E5B58]" />
-        </button>
+        <NotificationsDropdown />
       </div>
 
       {error && (
@@ -134,7 +133,7 @@ export default function AdminDashboard() {
                     </p>
                   </div>
                 </div>
-                <Link to={ROUTES.admin.hostels} className="px-4 py-2 bg-[#C56A30] hover:bg-[#b05b26] text-white font-extrabold text-xs rounded-full transition-colors shrink-0">
+                <Link to={`${ROUTES.admin.hostels}?status=PENDING&focus=${h.id}`} className="px-4 py-2 bg-[#C56A30] hover:bg-[#b05b26] text-white font-extrabold text-xs rounded-full transition-colors shrink-0">
                   Review
                 </Link>
               </div>

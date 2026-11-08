@@ -46,7 +46,12 @@ export const ROUTES = {
     users: "/admin/users",
     hostels: "/admin/hostels",
     schools: "/admin/schools",
+    bookings: "/admin/bookings",
+    complaints: "/admin/complaints",
+    reviews: "/admin/reviews",
     roomTours: "/admin/room-tours",
+    audit: "/admin/audit",
+    profile: "/admin/profile",
     settings: "/admin/settings",
   },
 } as const;

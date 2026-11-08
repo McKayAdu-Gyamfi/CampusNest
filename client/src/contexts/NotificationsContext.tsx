@@ -12,6 +12,8 @@ export interface AppNotification {
   message: string;
   read: boolean;
   booking_id?: string;
+  /** In-app path to open when tapped. */
+  link?: string;
   created_at: string;
 }
 
@@ -50,7 +52,7 @@ export function NotificationsProvider({ children }: { children: ReactNode }) {
 
 function NotificationsPoller({ publish }: { publish: (v: NotificationsValue) => void }) {
   const { user } = useAuth();
-  const active = !!user?.id && (user.role === "student" || user.role === "manager");
+  const active = !!user?.id;
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [floating, setFloating] = useState<AppNotification[]>([]);
   // Ids already shown or loaded, so each notification pops up once. The first
