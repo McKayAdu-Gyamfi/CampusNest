@@ -1,4 +1,6 @@
 import * as usersService from "./users.service.js";
+import { cq, cm } from "../../config/convexClient.js";
+import { api } from "../../../convex/_generated/api.js";
 
 // GET /api/users/me
 export const getMe = async (req, res, next) => {
@@ -112,6 +114,44 @@ export const adminUpdateUser = async (req, res, next) => {
     res.json({ success: true, data });
   } catch (err) {
     console.error(`[Users Controller - adminUpdateUser] Error for id ${req.params.id}:`, err);
+    next(err);
+  }
+};
+
+// PATCH /api/users/:id/suspension   body { suspended: boolean, reason?: string }   (admin only)
+export const setUserSuspension = async (req, res, next) => {
+  try {
+    const { id } = req.params;
+    const { suspended, reason } = req.body;
+
+    // An admin can't lock themselves out, and the last active admin can never be suspended.
+    if (suspended && id === req.user.id) {
+      return res.status(400).json({ success: false, message: "You can't suspend your own account" });
+    }
+    const target = await cq(api.users.getMeWithRoom, { id });
+    if (!target) return res.status(404).json({ success: false, message: "User not found" });
+    if (suspended && target.user_type === "ADMIN") {
+      const all = await cq(api.users.listAll, {});
+      const activeAdmins = all.filter((u) => u.user_type === "ADMIN" && !u.suspended_at && u.id !== id);
+      if (activeAdmins.length === 0) {
+        return res.status(400).json({ success: false, message: "At least one active admin is required" });
+      }
+    }
+
+    const data = await cm(api.users.setSuspended, { id, suspended, reason, actorId: req.user.id });
+    res.json({ success: true, data });
+  } catch (err) {
+    next(err);
+  }
+};
+
+// GET /api/users/:id/detail   (admin only): profile plus booking and hostel summary
+export const getUserDetail = async (req, res, next) => {
+  try {
+    const data = await cq(api.users.adminDetail, { id: req.params.id });
+    if (!data) return res.status(404).json({ success: false, message: "User not found" });
+    res.json({ success: true, data });
+  } catch (err) {
     next(err);
   }
 };

@@ -3,6 +3,7 @@ import { v } from "convex/values";
 import { toApiRow } from "./lib/toApiRow";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
 import { notify } from "./lib/notify";
+import { audit } from "./lib/audit";
 
 export const listByHostel = secureQuery({ hostelId: v.optional(v.string()) }, async (ctx, { hostelId }) => {
   let rows;
@@ -21,6 +22,8 @@ export const listByHostel = secureQuery({ hostelId: v.optional(v.string()) }, as
     rows.map(async (review: any) => {
       const row = toApiRow(review);
       row.USERS = null;
+      const hostel = await ctx.db.get(review.hostel_id);
+      row.HOSTEL = hostel ? { hostel_name: hostel.hostel_name } : null;
       if (review.student_id) {
         const student = await ctx.db.get(review.student_id);
         if (student) row.USERS = { email: student.email, name: student.name };
@@ -76,3 +79,23 @@ export const create = secureMutation({ data: v.any() }, async (ctx, { data }) =>
   }
   return toApiRow((await ctx.db.get(reviewId))!);
 });
+
+// Removes a review (moderation). The action is logged with the reviewer and rating.
+export const remove = secureMutation(
+  { id: v.string(), actorId: v.optional(v.string()), reason: v.optional(v.string()) },
+  async (ctx, { id, actorId, reason }) => {
+    const reviewId = ctx.db.normalizeId("reviews", id);
+    if (!reviewId) return false;
+    const review = await ctx.db.get(reviewId);
+    if (!review) return false;
+    const hostel = await ctx.db.get(review.hostel_id);
+    const student = review.student_id ? await ctx.db.get(review.student_id) : null;
+    await ctx.db.delete(reviewId);
+    await audit(ctx, {
+      actorId: actorId ? ctx.db.normalizeId("users", actorId) : null,
+      action: "review.removed", targetType: "review", targetId: id,
+      summary: `Removed a ${review.rating}-star review of ${hostel?.hostel_name ?? "a hostel"} by ${student?.name || student?.email || "a student"}${reason ? `: ${reason.trim()}` : ""}`,
+    });
+    return true;
+  }
+);

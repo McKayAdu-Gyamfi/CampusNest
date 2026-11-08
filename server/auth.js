@@ -1,5 +1,8 @@
 import { betterAuth } from "better-auth";
+import { APIError } from "better-auth/api";
 import { convexAdapter } from "./auth-convex-adapter.js";
+import { cq } from "./src/config/convexClient.js";
+import { api } from "./convex/_generated/api.js";
 
 export const auth = betterAuth({
 
@@ -38,6 +41,12 @@ export const auth = betterAuth({
       },
       payment_details: {
         type: "string",
+      },
+      // Set by an admin (see users.setSuspended). Never writable by the user.
+      suspended_at: {
+        type: "number",
+        required: false,
+        input: false,
       }
     }
   },
@@ -52,6 +61,22 @@ export const auth = betterAuth({
   // letting anyone self-escalate to a privileged role with zero
   // verification — that fallback has been removed.
   databaseHooks: {
+    // A suspended account can't open a new session, so it can't sign in. (Open
+    // sessions are deleted at suspension time and requireAuth re-checks every request.)
+    session: {
+      create: {
+        before: async (session) => {
+          const s = await cq(api.users.getSuspension, { id: session.userId });
+          if (s?.suspended) {
+            throw new APIError("FORBIDDEN", {
+              message: "This account has been suspended. Please contact support.",
+              code: "ACCOUNT_SUSPENDED",
+            });
+          }
+          return { data: session };
+        },
+      },
+    },
     user: {
       create: {
         before: (user) => {

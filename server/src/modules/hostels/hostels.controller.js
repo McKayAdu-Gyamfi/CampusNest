@@ -18,6 +18,23 @@ export const getHostels = async (req, res, next) => {
   }
 };
 
+// GET /api/hostels/admin/all?status=PENDING|APPROVED|REJECTED   (admin only)
+export const listHostelsForAdmin = async (req, res, next) => {
+  try {
+    const { status } = req.query;
+    const args = {};
+    if (status !== undefined) {
+      if (!["PENDING", "APPROVED", "REJECTED"].includes(String(status))) {
+        return res.status(400).json({ success: false, message: "status must be PENDING, APPROVED or REJECTED" });
+      }
+      args.status = String(status);
+    }
+    res.json({ success: true, data: await cq(api.hostels.listForAdmin, args) });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // GET /api/hostels/:id
 export const getHostelById = async (req, res, next) => {
   try {
@@ -91,13 +108,14 @@ export const updateHostel = async (req, res, next) => {
 // otherwise appear in public listings immediately.
 export const updateHostelStatus = async (req, res, next) => {
   try {
-    const { status } = req.body;
+    const { status, reason } = req.body;
 
     if (!["PENDING", "APPROVED", "REJECTED"].includes(status)) {
       return res.status(400).json({ success: false, message: "status must be PENDING, APPROVED, or REJECTED" });
     }
 
-    const data = await cm(api.hostels.update, { id: req.params.id, patch: { status } });
+    // actorId + reason are recorded on the hostel, in the audit log and in the manager's notification.
+    const data = await cm(api.hostels.update, { id: req.params.id, patch: { status }, actorId: req.user.id, reason });
     if (!data) {
       return res.status(404).json({ success: false, message: "Hostel not found" });
     }
@@ -163,7 +181,7 @@ export const uploadHostelImages = async (req, res, next) => {
       uploadedUrls.push(publicUrl);
     }
 
-    const data = await cm(api.hostels.addImages, { hostelId: id, urls: uploadedUrls });
+    const data = await cm(api.hostels.addImages, { hostelId: id, urls: uploadedUrls, actorId: req.user.id });
 
     res.status(201).json({ success: true, data });
   } catch (err) {
@@ -176,7 +194,7 @@ export const uploadHostelImages = async (req, res, next) => {
 export const removeHostelImage = async (req, res, next) => {
   try {
     const { id, imageId } = req.params;
-    const removed = await cm(api.hostels.removeImage, { hostelId: id, imageId });
+    const removed = await cm(api.hostels.removeImage, { hostelId: id, imageId, actorId: req.user.id });
     if (!removed) {
       return res.status(404).json({ success: false, message: "Image not found" });
     }

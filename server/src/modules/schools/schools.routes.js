@@ -11,6 +11,7 @@ router.get("/", ...admin, controllers.listSchools);
 router.post("/", ...admin, validateRequest(createSchoolSchema), controllers.createSchool);
 router.get("/unassigned-hostels", ...admin, controllers.listUnassignedHostels);
 router.patch("/:id", ...admin, validateRequest(updateSchoolSchema), controllers.updateSchool);
+router.delete("/:id", ...admin, controllers.deleteSchool);
 router.get("/:id/hostels", ...admin, controllers.listSchoolHostels);
 router.post("/:id/hostels", ...admin, validateRequest(assignHostelSchema), controllers.assignHostel);
 router.delete("/:id/hostels/:hostelId", ...admin, controllers.unassignHostel);

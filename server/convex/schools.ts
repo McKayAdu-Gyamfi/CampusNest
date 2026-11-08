@@ -1,4 +1,5 @@
 import { v, ConvexError } from "convex/values";
+import { audit } from "./lib/audit";
 import { toApiRow } from "./lib/toApiRow";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
 
@@ -51,8 +52,8 @@ export const list = secureQuery({}, async (ctx) => {
 });
 
 export const create = secureMutation(
-  { name: v.string(), location: v.string(), email_domain: v.string() },
-  async (ctx, { name, location, email_domain }) => {
+  { name: v.string(), location: v.string(), email_domain: v.string(), actorId: v.optional(v.string()) },
+  async (ctx, { name, location, email_domain, actorId }) => {
     const domain = normaliseDomain(email_domain);
     await assertDomainFree(ctx, domain);
     const now = Date.now();
@@ -62,6 +63,10 @@ export const create = secureMutation(
       email_domain: domain,
       created_at: now,
       updated_at: now,
+    });
+    await audit(ctx, {
+      actorId: actorId ? ctx.db.normalizeId("users", actorId) : null,
+      action: "school.created", targetType: "school", targetId: id, summary: `Added school ${name.trim()} (@${domain})`,
     });
     return toApiRow((await ctx.db.get(id))!);
   }
@@ -73,8 +78,9 @@ export const update = secureMutation(
     name: v.optional(v.string()),
     location: v.optional(v.string()),
     email_domain: v.optional(v.string()),
+    actorId: v.optional(v.string()),
   },
-  async (ctx, { id, name, location, email_domain }) => {
+  async (ctx, { id, name, location, email_domain, actorId }) => {
     const schoolId = ctx.db.normalizeId("schools", id);
     if (!schoolId) return null;
     const school = await ctx.db.get(schoolId);
@@ -88,7 +94,32 @@ export const update = secureMutation(
       await assertDomainFree(ctx, patch.email_domain, schoolId);
     }
     await ctx.db.patch(schoolId, patch);
+    await audit(ctx, {
+      actorId: actorId ? ctx.db.normalizeId("users", actorId) : null,
+      action: "school.updated", targetType: "school", targetId: id, summary: `Updated school ${patch.name ?? school.name}`,
+    });
     return toApiRow((await ctx.db.get(schoolId))!);
+  }
+);
+
+// Deletes a school. Its hostels are detached (not deleted) so they stay live,
+// they just no longer belong to any school.
+export const remove = secureMutation(
+  { id: v.string(), actorId: v.optional(v.string()) },
+  async (ctx, { id, actorId }) => {
+    const schoolId = ctx.db.normalizeId("schools", id);
+    if (!schoolId) return null;
+    const school = await ctx.db.get(schoolId);
+    if (!school) return null;
+    const hostels = await ctx.db.query("hostels").withIndex("by_school_id", (q: any) => q.eq("school_id", schoolId)).collect();
+    for (const h of hostels) await ctx.db.patch(h._id, { school_id: undefined, updated_at: Date.now() });
+    await ctx.db.delete(schoolId);
+    await audit(ctx, {
+      actorId: actorId ? ctx.db.normalizeId("users", actorId) : null,
+      action: "school.deleted", targetType: "school", targetId: id,
+      summary: `Deleted school ${school.name}${hostels.length ? ` (${hostels.length} hostel${hostels.length === 1 ? "" : "s"} detached)` : ""}`,
+    });
+    return { detached: hostels.length };
   }
 );
 

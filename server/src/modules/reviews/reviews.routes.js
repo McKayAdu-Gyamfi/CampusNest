@@ -9,4 +9,6 @@ const router = Router();
 router.get("/", controllers.getReviews);
 router.post("/", requireAuth, requireRole("STUDENT"), validateRequest(createReviewSchema), controllers.createReview);
 
+router.delete("/:id", requireAuth, requireRole("ADMIN"), controllers.removeReview);
+
 export default router;

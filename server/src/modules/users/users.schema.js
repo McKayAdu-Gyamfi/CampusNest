@@ -64,3 +64,14 @@ export const adminUpdateUserSchema = z.object({
     payment_details: z.string().optional()
   })
 });
+
+export const setSuspensionSchema = z.object({
+  params: z.object({ id: z.string() }),
+  body: z.object({
+    suspended: z.boolean(),
+    reason: z.string().trim().max(300).optional()
+  }).refine((b) => !b.suspended || (b.reason && b.reason.length >= 3), {
+    message: "Give a short reason when suspending an account",
+    path: ["reason"],
+  })
+});

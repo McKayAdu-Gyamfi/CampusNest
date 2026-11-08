@@ -5,6 +5,7 @@ import { toApiDoc } from "./lib/toApiDoc";
 import { applySort } from "./lib/applySort";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
 import { toApiRow } from "./lib/toApiRow";
+import { audit } from "./lib/audit";
 
 const whereValidator = v.array(v.object({ field: v.string(), value: v.any(), operator: v.optional(v.string()) }));
 
@@ -143,4 +144,64 @@ export const updateProfile = secureMutation({ id: v.string(), patch: v.any() }, 
 export const listAll = secureQuery({}, async (ctx) => {
   const users = await ctx.db.query("users").collect();
   return users.map((u: any) => toApiRow(u));
+});
+
+// Reads just the suspension flag: used at sign-in and on every API request.
+export const getSuspension = secureQuery({ id: v.string() }, async (ctx, { id }) => {
+  const userId = ctx.db.normalizeId("users", id);
+  if (!userId) return null;
+  const user = await ctx.db.get(userId);
+  if (!user) return null;
+  return { suspended: !!user.suspended_at, reason: user.suspended_reason ?? null };
+});
+
+// Suspends or reactivates an account. Suspending also ends every open session
+// so it takes effect immediately, not at the next sign-in.
+export const setSuspended = secureMutation(
+  { id: v.string(), suspended: v.boolean(), reason: v.optional(v.string()), actorId: v.optional(v.string()) },
+  async (ctx, { id, suspended, reason, actorId }) => {
+    const userId = ctx.db.normalizeId("users", id);
+    if (!userId) return null;
+    const user = await ctx.db.get(userId);
+    if (!user) return null;
+
+    await ctx.db.patch(userId, {
+      suspended_at: suspended ? Date.now() : undefined,
+      suspended_reason: suspended ? reason?.trim() || undefined : undefined,
+      updatedAt: Date.now(),
+    });
+    if (suspended) {
+      const sessions = await ctx.db.query("sessions").withIndex("by_userId", (q: any) => q.eq("userId", userId)).collect();
+      for (const s of sessions) await ctx.db.delete(s._id);
+    }
+    await audit(ctx, {
+      actorId: actorId ? ctx.db.normalizeId("users", actorId) : null,
+      action: suspended ? "user.suspended" : "user.reactivated",
+      targetType: "user", targetId: id,
+      summary: `${user.name || user.email} ${suspended ? "suspended" : "reactivated"}${suspended && reason ? `: ${reason.trim()}` : ""}`,
+    });
+    return toApiRow((await ctx.db.get(userId))!);
+  }
+);
+
+// Everything an admin needs to review one account in a single read.
+export const adminDetail = secureQuery({ id: v.string() }, async (ctx, { id }) => {
+  const userId = ctx.db.normalizeId("users", id);
+  if (!userId) return null;
+  const user = await ctx.db.get(userId);
+  if (!user) return null;
+  const row = toApiRow(user);
+
+  const bookings = await ctx.db.query("bookings").withIndex("by_student_id", (q: any) => q.eq("student_id", userId)).collect();
+  row.booking_counts = {
+    total: bookings.length,
+    confirmed: bookings.filter((b: any) => b.status === "CONFIRMED").length,
+    pending: bookings.filter((b: any) => b.status === "PENDING").length,
+    spent: bookings
+      .filter((b: any) => b.status === "CONFIRMED" || b.status === "CHECKED_OUT")
+      .reduce((s: number, b: any) => s + (b.amount_paid ?? 0), 0),
+  };
+  const hostels = await ctx.db.query("hostels").withIndex("by_manager_id", (q: any) => q.eq("manager_id", userId)).collect();
+  row.hostels = hostels.map((h: any) => ({ id: h._id, hostel_name: h.hostel_name, status: h.status }));
+  return row;
 });

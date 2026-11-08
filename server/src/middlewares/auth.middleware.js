@@ -13,6 +13,12 @@ export const requireAuth = async (req, res, next) => {
       return res.status(401).json({ success: false, message: "Unauthorized" });
     }
 
+    // Belt and braces: suspension also deletes the sessions, but a request
+    // already in flight (or a cached session) must not slip through.
+    if (session.user.suspended_at) {
+      return res.status(403).json({ success: false, code: "ACCOUNT_SUSPENDED", message: "This account has been suspended. Please contact support." });
+    }
+
     console.log("[Auth Middleware - requireAuth] Success for user:", session.user.id);
     req.user = session.user;
     next();

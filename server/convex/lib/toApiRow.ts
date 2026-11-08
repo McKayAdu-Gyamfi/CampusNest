@@ -12,6 +12,9 @@ const DATE_FIELDS = new Set([
   "updatedAt",
   "check_in_date",
   "check_out_date",
+  "suspended_at",
+  "reviewed_at",
+  "replied_at",
 ]);
 
 export function toApiRow<T extends { _id: unknown; _creationTime: number }>(doc: T): Record<string, any> {

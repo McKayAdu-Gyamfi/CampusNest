@@ -10,6 +10,8 @@ import { uploadMiddleware } from "../../middlewares/upload.middleware.js";
 const router = Router();
 
 router.get("/", controllers.getHostels);
+// Must come before "/:id", or "admin" would be read as a hostel id.
+router.get("/admin/all", requireAuth, requireRole("ADMIN"), controllers.listHostelsForAdmin);
 router.get("/:id", controllers.getHostelById);
 
 // Optionally, you might attach authentication middlewares here in the future

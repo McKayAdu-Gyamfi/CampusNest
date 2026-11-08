@@ -15,6 +15,17 @@ export const getReviews = async (req, res, next) => {
   }
 };
 
+// DELETE /api/reviews/:id   (admin moderation)
+export const removeReview = async (req, res, next) => {
+  try {
+    const ok = await cm(api.reviews.remove, { id: req.params.id, actorId: req.user.id, reason: req.body?.reason });
+    if (!ok) return res.status(404).json({ success: false, message: "Review not found" });
+    res.json({ success: true });
+  } catch (err) {
+    next(err);
+  }
+};
+
 // POST /api/reviews
 export const createReview = async (req, res, next) => {
   try {

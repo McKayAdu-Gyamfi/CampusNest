@@ -55,7 +55,7 @@ describe("settings routes", () => {
     as("ADMIN");
     cmMock.mockResolvedValue({ platform_name: "K" });
     await request(app).patch("/api/settings").send({ platform_name: "K", updated_at: 1, is_admin: true });
-    expect(cmMock.mock.calls[0][1]).toEqual({ platform_name: "K" });
+    expect(cmMock.mock.calls[0][1]).toEqual({ platform_name: "K", actorId: "ADMIN-id" });
 
     const bad = await request(app).patch("/api/settings").send({ support_email: "not-an-email" });
     expect(bad.status).toBe(400);
@@ -222,7 +222,7 @@ describe("hostel photos are admin-only", () => {
     as("ADMIN");
     cmMock.mockResolvedValueOnce(true);
     expect((await request(app).delete("/api/hostels/h1/images/i1")).status).toBe(200);
-    expect(cmMock.mock.calls[0][1]).toEqual({ hostelId: "h1", imageId: "i1" });
+    expect(cmMock.mock.calls[0][1]).toEqual({ hostelId: "h1", imageId: "i1", actorId: "ADMIN-id" });
   });
 });
 
@@ -248,3 +248,80 @@ describe("review routes", () => {
   });
 });
 
+describe("admin console routes", () => {
+  it("the admin hostel list is admin-only, validates the filter, and is not shadowed by /:id", async () => {
+    as("HOSTEL_MANAGER");
+    expect((await request(app).get("/api/hostels/admin/all")).status).toBe(403);
+    as("ADMIN");
+    cqMock.mockResolvedValueOnce([{ id: "h1" }]);
+    const ok = await request(app).get("/api/hostels/admin/all?status=PENDING");
+    expect(ok.status).toBe(200);
+    expect(cqMock.mock.calls[0][1]).toEqual({ status: "PENDING" });
+    expect((await request(app).get("/api/hostels/admin/all?status=NOPE")).status).toBe(400);
+  });
+
+  it("rejecting a hostel needs a reason; the actor and reason reach the mutation", async () => {
+    as("ADMIN");
+    expect((await request(app).patch("/api/hostels/h1/status").send({ status: "REJECTED" })).status).toBe(400);
+    expect((await request(app).patch("/api/hostels/h1/status").send({ status: "REJECTED", reason: "no" })).status).toBe(400);
+    cmMock.mockResolvedValueOnce({ id: "h1" });
+    const ok = await request(app).patch("/api/hostels/h1/status").send({ status: "REJECTED", reason: "Photos too dark" });
+    expect(ok.status).toBe(200);
+    expect(cmMock.mock.calls[0][1]).toMatchObject({ id: "h1", patch: { status: "REJECTED" }, actorId: "ADMIN-id", reason: "Photos too dark" });
+    cmMock.mockResolvedValueOnce({ id: "h1" });
+    expect((await request(app).patch("/api/hostels/h1/status").send({ status: "APPROVED" })).status).toBe(200);
+    as("HOSTEL_MANAGER");
+    expect((await request(app).patch("/api/hostels/h1/status").send({ status: "APPROVED" })).status).toBe(403);
+  });
+
+  it("suspension: admin only, needs a reason, never yourself, never the last admin", async () => {
+    as("STUDENT");
+    expect((await request(app).patch("/api/users/u1/suspension").send({ suspended: true, reason: "x y z" })).status).toBe(403);
+
+    as("ADMIN");
+    expect((await request(app).patch("/api/users/u1/suspension").send({ suspended: true })).status).toBe(400);
+    expect((await request(app).patch("/api/users/ADMIN-id/suspension").send({ suspended: true, reason: "oops" })).status).toBe(400);
+    expect(cmMock).not.toHaveBeenCalled();
+
+    // the last other active admin can't be suspended
+    cqMock.mockResolvedValueOnce({ id: "a2", user_type: "ADMIN" }).mockResolvedValueOnce([{ id: "a2", user_type: "ADMIN" }, { id: "ADMIN-id", user_type: "ADMIN" }]);
+    const last = await request(app).patch("/api/users/a2/suspension").send({ suspended: true, reason: "left company" });
+    expect(last.status).toBe(200); // ADMIN-id is still active, so a2 may be suspended
+    cqMock.mockResolvedValueOnce({ id: "a2", user_type: "ADMIN" }).mockResolvedValueOnce([{ id: "a2", user_type: "ADMIN" }]);
+    cmMock.mockReset();
+    expect((await request(app).patch("/api/users/a2/suspension").send({ suspended: true, reason: "left company" })).status).toBe(400);
+    expect(cmMock).not.toHaveBeenCalled();
+
+    cqMock.mockResolvedValueOnce({ id: "s1", user_type: "STUDENT" });
+    cmMock.mockResolvedValueOnce({ id: "s1" });
+    const ok = await request(app).patch("/api/users/s1/suspension").send({ suspended: true, reason: "Fake student ID" });
+    expect(ok.status).toBe(200);
+    expect(cmMock.mock.calls[0][1]).toMatchObject({ id: "s1", suspended: true, reason: "Fake student ID", actorId: "ADMIN-id" });
+  });
+
+  it("a suspended account is refused on every authenticated route", async () => {
+    session.user = { id: "s1", user_type: "STUDENT", suspended_at: 1 };
+    const res = await request(app).get("/api/notifications");
+    expect(res.status).toBe(403);
+    expect(res.body.code).toBe("ACCOUNT_SUSPENDED");
+  });
+
+  it("review removal, school deletion and the audit log are admin-only", async () => {
+    as("HOSTEL_MANAGER");
+    expect((await request(app).delete("/api/reviews/r1")).status).toBe(403);
+    expect((await request(app).delete("/api/schools/s1")).status).toBe(403);
+    expect((await request(app).get("/api/audit")).status).toBe(403);
+
+    as("ADMIN");
+    cmMock.mockResolvedValueOnce(true);
+    expect((await request(app).delete("/api/reviews/r1").send({ reason: "spam" })).status).toBe(200);
+    expect(cmMock.mock.calls.at(-1)[1]).toMatchObject({ id: "r1", actorId: "ADMIN-id", reason: "spam" });
+    cmMock.mockResolvedValueOnce(false);
+    expect((await request(app).delete("/api/reviews/gone")).status).toBe(404);
+    cmMock.mockResolvedValueOnce({ detached: 2 });
+    expect((await request(app).delete("/api/schools/s1")).status).toBe(200);
+    cqMock.mockResolvedValueOnce([]);
+    expect((await request(app).get("/api/audit?limit=9999")).status).toBe(200);
+    expect(cqMock.mock.calls.at(-1)[1]).toEqual({ limit: 500 });
+  });
+});

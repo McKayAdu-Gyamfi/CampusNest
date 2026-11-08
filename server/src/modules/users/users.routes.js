@@ -6,7 +6,8 @@ import {
   completeProfileSchema, 
   adminUpdateUserSchema,
   createAdminSchema,
-  completeManagerProfileSchema
+  completeManagerProfileSchema,
+  setSuspensionSchema
 } from "./users.schema.js";
 import { requireAuth, requireRole } from "../../middlewares/auth.middleware.js";
 
@@ -55,6 +56,16 @@ router.post(
   requireRole("ADMIN"),
   validateRequest(createAdminSchema),
   controllers.createAdmin
+);
+
+router.get("/:id/detail", requireAuth, requireRole("ADMIN"), controllers.getUserDetail);
+
+router.patch(
+  "/:id/suspension",
+  requireAuth,
+  requireRole("ADMIN"),
+  validateRequest(setSuspensionSchema),
+  controllers.setUserSuspension
 );
 
 router.get(

@@ -30,6 +30,9 @@ export default defineSchema({
     date_of_birth: v.optional(v.string()),
     emergency_contact_name: v.optional(v.string()),
     emergency_contact_phone: v.optional(v.string()),
+    // Set by an admin: the account can't sign in or use the API while suspended.
+    suspended_at: v.optional(v.number()),
+    suspended_reason: v.optional(v.string()),
     // Manager
     business_name: v.optional(v.string()),
     ghana_card_number: v.optional(v.string()),
@@ -96,6 +99,10 @@ export default defineSchema({
     manager_id: v.optional(v.id("users")),
     school_id: v.optional(v.id("schools")),
     status: v.union(v.literal("PENDING"), v.literal("APPROVED"), v.literal("REJECTED")),
+    // Set when an admin approves or rejects; the reason is shown to the manager.
+    status_reason: v.optional(v.string()),
+    reviewed_by: v.optional(v.id("users")),
+    reviewed_at: v.optional(v.number()),
     created_at: v.number(),
     updated_at: v.number(),
   }).index("by_manager_id", ["manager_id"])
@@ -176,8 +183,20 @@ export default defineSchema({
     message: v.string(),
     read: v.boolean(),
     booking_id: v.optional(v.id("bookings")),
+    /** In-app path to open when the notification is tapped, e.g. "/admin/hostels". */
+    link: v.optional(v.string()),
     created_at: v.number(),
   }).index("by_user_id", ["user_id", "created_at"]),
+
+  // Who did what: every admin action that changes data writes a row here.
+  auditLogs: defineTable({
+    actor_id: v.id("users"),
+    action: v.string(),
+    target_type: v.string(),
+    target_id: v.string(),
+    summary: v.string(),
+    created_at: v.number(),
+  }).index("by_created_at", ["created_at"]),
 
   bookings: defineTable({
     check_in_date: v.number(),

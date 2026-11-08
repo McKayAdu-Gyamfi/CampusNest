@@ -22,7 +22,7 @@ export const getSettings = async (req, res, next) => {
 
 export const updateSettings = async (req, res, next) => {
   try {
-    res.json({ success: true, data: await cm(api.settings.update, req.body) });
+    res.json({ success: true, data: await cm(api.settings.update, { ...req.body, actorId: req.user.id }) });
   } catch (err) {
     next(err);
   }

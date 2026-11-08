@@ -2,7 +2,7 @@
 import { v } from "convex/values";
 import { toApiRow } from "./lib/toApiRow";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
-import { notify } from "./lib/notify";
+import { notify, notifyAdmins } from "./lib/notify";
 
 const complaintStatus = v.union(v.literal("OPEN"), v.literal("IN_PROGRESS"), v.literal("RESOLVED"));
 
@@ -110,6 +110,16 @@ export const create = secureMutation({ data: v.any() }, async (ctx, { data }) =>
       title: isEnquiry ? "New enquiry" : "New complaint",
       message: `${student?.name || student?.email || "A student"}${hostel ? ` (${hostel.hostel_name})` : ""}: ${data.subject || String(data.content).slice(0, 80)}`,
       bookingId: bookingId ?? undefined,
+    });
+  }
+  if (data.kind !== "ENQUIRY") {
+    const student = await ctx.db.get(studentId);
+    const hostel = await ctx.db.get(hostelId);
+    await notifyAdmins(ctx, {
+      type: "complaint_new",
+      title: "New complaint",
+      message: `${student?.name || student?.email || "A student"}${hostel ? ` about ${hostel.hostel_name}` : ""}: ${data.subject || String(data.content).slice(0, 80)}`,
+      link: "/admin/complaints",
     });
   }
   return toApiRow((await ctx.db.get(complaintId))!);

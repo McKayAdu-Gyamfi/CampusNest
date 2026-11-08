@@ -1,4 +1,5 @@
 import { v } from "convex/values";
+import { audit } from "./lib/audit";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
 
 // Values the admin UI showed hardcoded before settings were persisted. A
@@ -27,6 +28,7 @@ export const update = secureMutation(
     platform_name: v.optional(v.string()),
     support_email: v.optional(v.string()),
     maintenance_mode: v.optional(v.boolean()),
+    actorId: v.optional(v.string()),
   },
   async (ctx, patch) => {
     const clean: Record<string, any> = {};
@@ -40,6 +42,11 @@ export const update = secureMutation(
     } else {
       await ctx.db.insert("settings", { ...DEFAULT_SETTINGS, ...clean, updated_at: now });
     }
+    await audit(ctx, {
+      actorId: patch.actorId ? ctx.db.normalizeId("users", patch.actorId) : null,
+      action: "settings.updated", targetType: "settings", targetId: "platform",
+      summary: `Platform settings changed: ${Object.keys(clean).join(", ") || "no changes"}`,
+    });
     return await readSettings(ctx);
   }
 );

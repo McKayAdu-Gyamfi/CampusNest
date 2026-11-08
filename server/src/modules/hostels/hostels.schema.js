@@ -42,6 +42,11 @@ export const updateHostelStatusSchema = z.object({
     id: z.string()
   }),
   body: z.object({
-    status: z.enum(["PENDING", "APPROVED", "REJECTED"])
+    status: z.enum(["PENDING", "APPROVED", "REJECTED"]),
+    // Shown to the manager. Required when rejecting: they need to know what to fix.
+    reason: z.string().trim().max(500).optional()
+  }).refine((b) => b.status !== "REJECTED" || (b.reason && b.reason.length >= 5), {
+    message: "Give a short reason (at least 5 characters) when rejecting a hostel",
+    path: ["reason"],
   })
 });

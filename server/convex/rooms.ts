@@ -1,5 +1,6 @@
 // server/convex/rooms.ts
 import { v } from "convex/values";
+import { audit } from "./lib/audit";
 import { toApiRow } from "./lib/toApiRow";
 import { secureQuery, secureMutation } from "./lib/secureFunction";
 
@@ -51,6 +52,8 @@ export const list = secureQuery(
       if (!hostel) continue;
       const row = toApiRow(room);
       row.HOSTEL = { hostel_name: hostel.hostel_name };
+      const scenes = await ctx.db.query("roomTourScenes").withIndex("by_room_id", (q: any) => q.eq("room_id", room._id)).collect();
+      row.tour_scene_count = scenes.length;
       out.push(row);
     }
     return out;
@@ -196,14 +199,22 @@ export const addImages = secureMutation(
 );
 
 export const addTourScene = secureMutation(
-  { roomId: v.string(), scene_name: v.string(), scene_config_url: v.string() },
-  async (ctx, { roomId, scene_name, scene_config_url }) => {
+  { roomId: v.string(), scene_name: v.string(), scene_config_url: v.string(), actorId: v.optional(v.string()) },
+  async (ctx, { roomId, scene_name, scene_config_url, actorId }) => {
     const id = ctx.db.normalizeId("rooms", roomId);
     if (!id) throw new Error("Room not found");
     const now = Date.now();
     const rowId = await ctx.db.insert("roomTourScenes", {
       room_id: id, scene_name, scene_config_url, created_at: now, updated_at: now,
     });
+    if (actorId) {
+      const room = await ctx.db.get(id);
+      const hostel = room ? await ctx.db.get(room.hostel_id) : null;
+      await audit(ctx, {
+        actorId: ctx.db.normalizeId("users", actorId), action: "tour.scene_added", targetType: "room", targetId: roomId,
+        summary: `Added tour scene "${scene_name}" to room ${room?.room_number ?? ""} at ${hostel?.hostel_name ?? "a hostel"}`,
+      });
+    }
     return toApiRow((await ctx.db.get(rowId))!);
   }
 );
@@ -211,14 +222,22 @@ export const addTourScene = secureMutation(
 // roomId is the room from the URL the caller was authorized against. A scene
 // belonging to any other room is left alone with the same no-op response.
 export const removeTourScene = secureMutation(
-  { id: v.string(), roomId: v.string() },
-  async (ctx, { id, roomId }) => {
+  { id: v.string(), roomId: v.string(), actorId: v.optional(v.string()) },
+  async (ctx, { id, roomId, actorId }) => {
     const sceneId = ctx.db.normalizeId("roomTourScenes", id);
     if (!sceneId) return { success: true };
     const expectedRoomId = ctx.db.normalizeId("rooms", roomId);
     if (!expectedRoomId) return { success: true };
     const scene = await ctx.db.get(sceneId);
-    if (scene && scene.room_id === expectedRoomId) await ctx.db.delete(sceneId);
+    if (scene && scene.room_id === expectedRoomId) {
+      await ctx.db.delete(sceneId);
+      if (actorId) {
+        await audit(ctx, {
+          actorId: ctx.db.normalizeId("users", actorId), action: "tour.scene_removed", targetType: "room", targetId: roomId,
+          summary: `Removed tour scene "${scene.scene_name}"`,
+        });
+      }
+    }
     return { success: true };
   }
 );

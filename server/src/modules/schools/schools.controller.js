@@ -24,11 +24,17 @@ export const listSchools = handle(async (req, res) => {
 });
 
 export const createSchool = handle(async (req, res) => {
-  res.status(201).json({ success: true, data: await cm(api.schools.create, req.body) });
+  res.status(201).json({ success: true, data: await cm(api.schools.create, { ...req.body, actorId: req.user.id }) });
 });
 
 export const updateSchool = handle(async (req, res) => {
-  const data = await cm(api.schools.update, { id: req.params.id, ...req.body });
+  const data = await cm(api.schools.update, { id: req.params.id, ...req.body, actorId: req.user.id });
+  if (!data) return res.status(404).json({ success: false, message: "School not found" });
+  res.json({ success: true, data });
+});
+
+export const deleteSchool = handle(async (req, res) => {
+  const data = await cm(api.schools.remove, { id: req.params.id, actorId: req.user.id });
   if (!data) return res.status(404).json({ success: false, message: "School not found" });
   res.json({ success: true, data });
 });
