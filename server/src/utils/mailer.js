@@ -11,6 +11,10 @@ const smtpConfigured = () => !!process.env.SMTP_HOST;
 
 const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+// Addresses on reserved domains (the seeded demo accounts use ".test") can never
+// receive mail; sending to them would only bounce and hurt the sender's reputation.
+export const isReservedAddress = (email) => /\.(test|invalid|localhost|example)$/i.test(String(email).trim());
+
 /** @returns {Promise<{ sent: boolean }>} */
 export async function sendMail({ to, subject, text, html, devNote }) {
   if (!smtpConfigured()) {
@@ -19,6 +23,10 @@ export async function sendMail({ to, subject, text, html, devNote }) {
     } else {
       console.log(`[Mailer] SMTP not configured (dev). "${subject}" for ${to}${devNote ? `\n${devNote}` : ""}`);
     }
+    return { sent: false };
+  }
+  if (isReservedAddress(to)) {
+    if (process.env.NODE_ENV !== "production") console.log(`[Mailer] Not sending "${subject}" to ${to}: reserved address${devNote ? `\n${devNote}` : ""}`);
     return { sent: false };
   }
   const port = Number(process.env.SMTP_PORT) || 587;

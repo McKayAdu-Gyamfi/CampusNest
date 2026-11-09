@@ -1,5 +1,6 @@
 import { cq, cm } from "../../config/convexClient.js";
 import { api } from "../../../convex/_generated/api.js";
+import { emailEnquiryReply } from "../../emails/events.js";
 
 // GET /api/complaints
 export const getComplaints = async (req, res, next) => {
@@ -117,6 +118,9 @@ export const updateComplaintStatus = async (req, res, next) => {
     if (!data) {
       return res.status(404).json({ success: false, message: "Complaint not found" });
     }
+
+    // Email the student the manager's answer (only when there is a reply, not for a bare status change).
+    if (reply?.trim()) void emailEnquiryReply(complaint, reply);
 
     res.json({ success: true, data });
   } catch (err) {

@@ -1,6 +1,7 @@
 import { cq, cm } from "../../config/convexClient.js";
 import { api } from "../../../convex/_generated/api.js";
 import { verifyTransaction } from "../payments/payments.routes.js";
+import { emailBookingCreated, emailBookingDecision } from "../../emails/events.js";
 
 // GET /api/bookings?student_id=123
 export const getBookings = async (req, res, next) => {
@@ -95,6 +96,9 @@ export const createBooking = async (req, res, next) => {
       data: { check_in_date, check_out_date, room_id, student_id: final_student_id, payment_reference, amount_paid },
     });
 
+    // Receipt for the student and a heads-up for the manager; never blocks the response.
+    void emailBookingCreated(data.id);
+
     res.status(201).json({ success: true, data });
   } catch (err) {
     if (err.data?.code === "DUPLICATE_PAYMENT") {
@@ -155,6 +159,9 @@ export const updateBookingStatus = async (req, res, next) => {
     if (!data) {
       return res.status(404).json({ success: false, message: "Booking not found" });
     }
+
+    // Tell the student when the manager approves or declines (not for their own cancellation).
+    void emailBookingDecision(id, { status, previous: booking.status, byStudent: req.user.user_type === "STUDENT" });
 
     res.json({ success: true, data });
   } catch (err) {

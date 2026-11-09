@@ -1,6 +1,7 @@
 import { auth } from "../../../auth.js";
 import { cm } from "../../config/convexClient.js";
 import { api } from "../../../convex/_generated/api.js";
+import { emailWelcome } from "../../emails/events.js";
 
 // POST /api/auth/register
 export const registerManager = async (req, res, next) => {
@@ -35,6 +36,8 @@ export const registerManager = async (req, res, next) => {
     }
 
     console.log("[Auth Controller - registerManager] Success for user:", updatedUser?.id);
+    // Fire-and-forget: a slow or failing mail server must not affect sign-up.
+    void emailWelcome({ name: updatedUser.name || name, email: updatedUser.email || email }, "manager");
     res.status(201).json({ success: true, data: updatedUser });
   } catch (err) {
     console.error("[Auth Controller - registerManager] Catch Error:", err);
@@ -57,7 +60,10 @@ export const signUp = async (req, res, next) => {
 
     const data = await response.json().catch(() => ({}));
     if (response.status >= 400) console.error("[Auth] Sign Up error:", data);
-    else console.log("[Auth] Sign Up success for:", email);
+    else {
+      console.log("[Auth] Sign Up success for:", email);
+      void emailWelcome({ name: data?.user?.name || name || email.split("@")[0], email: data?.user?.email || email }, "student");
+    }
 
     res.status(response.status).json(data);
   } catch (err) {
