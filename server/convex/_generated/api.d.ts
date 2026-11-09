@@ -10,12 +10,14 @@
 
 import type * as accounts from "../accounts.js";
 import type * as amenities from "../amenities.js";
+import type * as auditLogs from "../auditLogs.js";
 import type * as bookings from "../bookings.js";
 import type * as complaints from "../complaints.js";
 import type * as files from "../files.js";
 import type * as hostels from "../hostels.js";
 import type * as http from "../http.js";
 import type * as lib_applySort from "../lib/applySort.js";
+import type * as lib_audit from "../lib/audit.js";
 import type * as lib_notify from "../lib/notify.js";
 import type * as lib_secureFunction from "../lib/secureFunction.js";
 import type * as lib_toApiDoc from "../lib/toApiDoc.js";
@@ -41,12 +43,14 @@ import type {
 declare const fullApi: ApiFromModules<{
   accounts: typeof accounts;
   amenities: typeof amenities;
+  auditLogs: typeof auditLogs;
   bookings: typeof bookings;
   complaints: typeof complaints;
   files: typeof files;
   hostels: typeof hostels;
   http: typeof http;
   "lib/applySort": typeof lib_applySort;
+  "lib/audit": typeof lib_audit;
   "lib/notify": typeof lib_notify;
   "lib/secureFunction": typeof lib_secureFunction;
   "lib/toApiDoc": typeof lib_toApiDoc;
