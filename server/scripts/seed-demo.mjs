@@ -92,15 +92,8 @@ async function main() {
     roomId[spec.room_number] = room.id;
   }
 
-  // Reviews averaging 4.8, matching the listing's rating.
-  const reviews = await cq(api.reviews.listByHostel, { hostelId: hostel.id });
-  if (reviews.length === 0) {
-    const ratings = [5, 5, 5, 4, 5];
-    for (const rating of ratings) {
-      await cm(api.reviews.create, { data: { hostel_id: hostel.id, rating } });
-    }
-    console.log("  reviews: 5 (avg 4.8)");
-  }
+  // No seeded reviews: a rating on the listing should come from real students
+  // (a student can only review after a confirmed stay). Until then it shows "New".
 
   console.log(`\nManager: ${MANAGER.email} / ${MANAGER.password}\nStudent: ${STUDENT.email} / ${STUDENT.password}\nAdmin: ${ADMIN.email} / ${ADMIN.password}`);
 }

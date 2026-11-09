@@ -110,3 +110,8 @@ export async function fetchHostels(): Promise<Hostel[]> {
     })
   );
 }
+
+/** "4.8", or "New" while nobody has reviewed the hostel yet (ratings are 1-5, so 0 means none). */
+export function formatRating(rating: number): string {
+  return rating > 0 ? rating.toFixed(1) : "New";
+}

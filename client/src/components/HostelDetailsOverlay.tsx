@@ -7,6 +7,7 @@ import HostelReviews from "@/components/HostelReviews";
 import NotificationsDropdown from "@/components/NotificationsDropdown";
 import { useAuth } from "@/contexts/AuthContext";
 import { getInitials } from "@/lib/utils";
+import { formatRating } from "@/lib/hostels";
 
 export interface HostelDetailsOverlayProps {
   selectedHostel: any;
@@ -326,7 +327,7 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
                 <h2 className="text-2xl font-bold text-foreground">{hostel.name}</h2>
                 <div className="flex items-center space-x-1 bg-primary/10 px-2.5 py-1 rounded-lg shrink-0">
                   <ThumbsUp className="w-4 h-4 text-primary fill-primary" />
-                  <span className="text-sm font-bold text-primary">{hostel.rating.toFixed(1)}</span>
+                  <span className="text-sm font-bold text-primary">{formatRating(hostel.rating)}</span>
                 </div>
               </div>
 
@@ -483,7 +484,7 @@ export default function HostelDetailsOverlay({ selectedHostel, setSelectedHostel
                 <h2 className="text-3xl font-extrabold text-foreground tracking-tight">{hostel.name}</h2>
                 <div className="flex items-center space-x-1 bg-yellow-400/20 px-2 py-1 rounded-lg">
                   <Star className="w-4 h-4 text-yellow-600 fill-yellow-600" />
-                  <span className="text-sm font-bold text-yellow-700">{hostel.rating.toFixed(1)}</span>
+                  <span className="text-sm font-bold text-yellow-700">{formatRating(hostel.rating)}</span>
                 </div>
               </div>
               <a

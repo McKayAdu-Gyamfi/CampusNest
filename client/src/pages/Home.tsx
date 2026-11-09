@@ -13,6 +13,7 @@ import { useHostels } from "@/contexts/HostelsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { getInitials } from "@/lib/utils";
 import { useToast } from "@/components/ui/toaster";
+import { formatRating } from "@/lib/hostels";
 
 const getBadgeStyle = (availability: string) => {
   switch (availability?.toUpperCase()) {
@@ -201,7 +202,7 @@ export default function Home() {
                   })()}
                   <div className="flex items-center space-x-1 bg-yellow-400/20 px-2 flex-shrink-0 py-1 rounded-lg">
                     <Star className="w-3.5 h-3.5 text-yellow-600 fill-yellow-600" />
-                    <span className="text-sm font-bold text-yellow-700">{hostel.rating.toFixed(1)}</span>
+                    <span className="text-sm font-bold text-yellow-700">{formatRating(hostel.rating)}</span>
                   </div>
                 </div>
               </div>

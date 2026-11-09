@@ -1,4 +1,5 @@
 import { Bookmark, Crown } from "lucide-react";
+import { formatRating } from "@/lib/hostels";
 
 interface HostelCardProps {
   hostel: any;
@@ -37,7 +38,7 @@ export default function HostelCard({
         {/* Rating Badge Top Left */}
         <div className="absolute top-3 left-3 bg-black/80 backdrop-blur-md px-2.5 py-1 rounded-full flex items-center space-x-1 shadow-sm">
           <Crown className="w-3.5 h-3.5 text-[#C56A30] fill-[#C56A30]" />
-          <span className="text-xs font-extrabold text-white">{hostel.rating.toFixed(1)}</span>
+          <span className="text-xs font-extrabold text-white">{formatRating(hostel.rating)}</span>
         </div>
 
         {/* Save / Bookmark Button Top Right */}

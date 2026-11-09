@@ -5,6 +5,7 @@ import { ChevronRight, MapPin, Star } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { errorMessage } from "@/lib/adminApi";
 import { listManagerHostels, type ManagerHostel } from "@/lib/managerHostels";
+import { formatRating } from "@/lib/hostels";
 
 export default function ManagerProperties() {
   const { user } = useAuth();
@@ -58,7 +59,7 @@ export default function ManagerProperties() {
                   <h2 className="text-[18px] font-bold text-[#463C38]">{p.name}</h2>
                   <span className="flex items-center space-x-1 bg-[#FDF3E7] text-[#A84A1A] px-2 py-0.5 rounded-full text-[12px] font-bold shrink-0">
                     <Star className="w-3.5 h-3.5 fill-current" />
-                    <span>{p.rating.toFixed(1)}</span>
+                    <span>{formatRating(p.rating)}</span>
                   </span>
                 </div>
                 <p className="flex items-center text-[13px] font-medium text-[#8C8279] mt-1">

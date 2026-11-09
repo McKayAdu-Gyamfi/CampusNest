@@ -13,6 +13,7 @@ import { useHostels } from "@/contexts/HostelsContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { getInitials } from "@/lib/utils";
 import { useToast } from "@/components/ui/toaster";
+import { formatRating } from "@/lib/hostels";
 
 export default function Explore() {
   const { toast } = useToast();
@@ -180,7 +181,7 @@ export default function Explore() {
                     })()}
                     <div className="flex items-center space-x-1 shrink-0">
                       <Star className="w-4 h-4 text-[#E09F5E] fill-[#E09F5E]" />
-                      <span className="text-[14px] font-bold text-foreground">{hostel.rating.toFixed(1)}</span>
+                      <span className="text-[14px] font-bold text-foreground">{formatRating(hostel.rating)}</span>
                     </div>
                   </div>
                 </div>
