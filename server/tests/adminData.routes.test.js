@@ -336,5 +336,15 @@ describe("password reset requests", () => {
     expect(codes.slice(0, 5).every((c) => c === 200)).toBe(true);
     expect(codes.slice(5)).toEqual([429, 429]);
   });
+
+  it("choosing the new password has its own, looser budget", async () => {
+    // The request budget is already spent by the test above; confirming must still work.
+    const codes = [];
+    for (let i = 0; i < 6; i++) {
+      const r = await request(app).post("/api/auth/reset-password").send({ token: "t", newPassword: "longenough1" });
+      codes.push(r.status);
+    }
+    expect(codes.every((c) => c !== 429)).toBe(true);
+  });
 });
 

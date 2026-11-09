@@ -31,8 +31,9 @@ export const auth = betterAuth({
         console.warn("[Auth] Password reset requested for an account that can't reset by email; no email sent");
         return;
       }
-      // Deliberately not awaited: a fast response for unknown emails and a slow
-      // one for real accounts would reveal which emails are registered.
+      // Deliberately not awaited, so sending (SMTP can take seconds) doesn't add to
+      // the response time. The request route also holds every answer to a fixed
+      // minimum time (minResponseTime) so timing can't reveal which emails exist.
       const { subject, text, html } = passwordResetEmail({ name: user.name, url });
       sendMail({ to: user.email, subject, text, html, devNote: `Reset link: ${url}` })
         .catch((e) => console.error("[Auth] Could not send the password reset email:", e.message));
